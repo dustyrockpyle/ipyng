@@ -1,5 +1,5 @@
 angular.module('ipyng.kernel.watch', ['ng.lodash']).
-  factory('ipyWatch', ['_', function (_) {
+  factory('ipyWatch', function (_) {
     var ipyWatch = {};
     ipyWatch.expressions = {};
     ipyWatch.createWatch = function (kernelID, expression) {
@@ -48,5 +48,5 @@ angular.module('ipyng.kernel.watch', ['ng.lodash']).
     };
 
     return ipyWatch;
-  }]
-);
+  })
+;

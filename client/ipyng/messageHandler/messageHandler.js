@@ -1,80 +1,77 @@
 angular.module('ipyng.messageHandler', ['ipyng.websocket', 'ipyng.utils', 'ng.lodash'])
-  .factory('ipyMessageHandler', ['ipyWebsocketHandler', 'ipyMessage', 'ipyKernelPath', 'ipyUtils', '$location', '$q', '_',
-    function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils, $location, $q, _) {
-      var ipyMessageHandler = {};
+  .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils, $location, $q, _) {
+    var ipyMessageHandler = {};
 
-      ipyMessageHandler.hostname = $location.host();
-      ipyMessageHandler.username = "username";
-      ipyMessageHandler.session = _.uniqueId();
-      ipyMessage.configure(ipyMessageHandler.username, ipyMessageHandler.session);
+    ipyMessageHandler.hostname = $location.host();
+    ipyMessageHandler.username = "username";
+    ipyMessageHandler.session = _.uniqueId();
+    ipyMessage.configure(ipyMessageHandler.username, ipyMessageHandler.session);
 
-      ipyMessageHandler.wsUrl = function (kernelID, endpoint) {
-        return ipyUtils.url_path_join("ws://" + ipyMessageHandler.hostname, ipyKernelPath, kernelID, endpoint);
-      };
+    ipyMessageHandler.wsUrl = function (kernelID, endpoint) {
+      return ipyUtils.url_path_join("ws://" + ipyMessageHandler.hostname + ":" + $location.port(), ipyKernelPath, kernelID, endpoint);
+    };
 
-      ipyMessageHandler.httpUrl = function (kernelID, endpoint) {
-        return ipyUtils.url_path_join("http://" + ipyMessageHandler.hostname, ipyKernelPath, kernelID, endpoint);
-      };
+    ipyMessageHandler.httpUrl = function (kernelID, endpoint) {
+      return ipyUtils.url_path_join("http://" + ipyMessageHandler.hostname, ipyKernelPath, kernelID, endpoint);
+    };
 
-      ipyMessageHandler.shellUrl = function (kernelID) {
-        return ipyMessageHandler.wsUrl(kernelID, 'shell');
-      };
+    ipyMessageHandler.shellUrl = function (kernelID) {
+      return ipyMessageHandler.wsUrl(kernelID, 'shell');
+    };
 
-      ipyMessageHandler.stdinUrl = function (kernelID) {
-        return ipyMessageHandler.wsUrl(kernelID, 'stdin');
-      };
+    ipyMessageHandler.stdinUrl = function (kernelID) {
+      return ipyMessageHandler.wsUrl(kernelID, 'stdin');
+    };
 
-      ipyMessageHandler.iopubUrl = function (kernelID) {
-        return ipyMessageHandler.wsUrl(kernelID, 'iopub');
-      };
+    ipyMessageHandler.iopubUrl = function (kernelID) {
+      return ipyMessageHandler.wsUrl(kernelID, 'iopub');
+    };
 
-      ipyMessageHandler.deferredRequests = {};
-      ipyMessageHandler.sendShellRequest = function (kernelID, message) {
-        var deferred, msgID;
-        deferred = $q.defer();
-        msgID = ipyMessage.getMessageID(message);
-        ipyMessageHandler.deferredRequests[msgID] = deferred;
-        ipyWebsocketHandler.send(ipyMessageHandler.shellUrl(kernelID), JSON.stringify(message));
-        return deferred.promise;
-      };
+    ipyMessageHandler.deferredRequests = {};
+    ipyMessageHandler.sendShellRequest = function (kernelID, message) {
+      var deferred, msgID;
+      deferred = $q.defer();
+      msgID = ipyMessage.getMessageID(message);
+      ipyMessageHandler.deferredRequests[msgID] = deferred;
+      ipyWebsocketHandler.send(ipyMessageHandler.shellUrl(kernelID), JSON.stringify(message));
+      return deferred.promise;
+    };
 
-      ipyMessageHandler.handleShellReply = function (event) {
-        var message, parentID;
-        message = event.data;
-        parentID = ipyMessage.getParentMessageID(message);
-        ipyMessageHandler.deferredRequests[parentID].resolve(message);
-        delete ipyMessageHandler.deferredRequests[parentID];
-      };
+    ipyMessageHandler.handleShellReply = function (event) {
+      var message, parentID;
+      message = event.data;
+      parentID = ipyMessage.getParentMessageID(message);
+      ipyMessageHandler.deferredRequests[parentID].resolve(message);
+      delete ipyMessageHandler.deferredRequests[parentID];
+    };
 
-      ipyMessageHandler.handleIopubMessage = function (event) {
-        var message = event.data;
-        var parentID = ipyMessage.getParentMessageID(message);
-        ipyMessageHandler.deferredRequests[parentID].notify(message);
-      };
+    ipyMessageHandler.handleIopubMessage = function (event) {
+      var message = event.data;
+      var parentID = ipyMessage.getParentMessageID(message);
+      ipyMessageHandler.deferredRequests[parentID].notify(message);
+    };
 
-      ipyMessageHandler.handleStdinRequest = function (event) {
-        var message = event.data;
-        var parentID = ipyMessage.getParentMessageID(message);
-        ipyMessageHandler.deferredRequests[parentID].notify(message);
-      };
+    ipyMessageHandler.handleStdinRequest = function (event) {
+      var message = event.data;
+      var parentID = ipyMessage.getParentMessageID(message);
+      ipyMessageHandler.deferredRequests[parentID].notify(message);
+    };
 
-      ipyMessageHandler.sendConnectRequest = function (kernelID) {
-        var shellUrl = ipyMessageHandler.shellUrl(kernelID);
-        var iopubUrl = ipyMessageHandler.iopubUrl(kernelID);
-        var stdinUrl = ipyMessageHandler.stdinUrl(kernelID);
-        ipyWebsocketHandler.registerOnMessageCallback(shellUrl, ipyMessageHandler.handleShellReply);
-        ipyWebsocketHandler.registerOnMessageCallback(iopubUrl, ipyMessageHandler.handleIopubMessage);
-        ipyWebsocketHandler.registerOnMessageCallback(stdinUrl, ipyMessageHandler.handleStdinRequest);
-        var startMessage = JSON.stringify(ipyMessage.makeStartMessage());
-        ipyWebsocketHandler.send(shellUrl, startMessage);
-        ipyWebsocketHandler.send(iopubUrl, startMessage);
-        ipyWebsocketHandler.send(stdinUrl, startMessage);
-      };
-
-      return ipyMessageHandler;
-    }
-  ])
-  .factory('ipyMessage', ['_', function (_) {
+    ipyMessageHandler.sendConnectRequest = function (kernelID) {
+      var shellUrl = ipyMessageHandler.shellUrl(kernelID);
+      var iopubUrl = ipyMessageHandler.iopubUrl(kernelID);
+      var stdinUrl = ipyMessageHandler.stdinUrl(kernelID);
+      ipyWebsocketHandler.registerOnMessageCallback(shellUrl, ipyMessageHandler.handleShellReply);
+      ipyWebsocketHandler.registerOnMessageCallback(iopubUrl, ipyMessageHandler.handleIopubMessage);
+      ipyWebsocketHandler.registerOnMessageCallback(stdinUrl, ipyMessageHandler.handleStdinRequest);
+      var startMessage = JSON.stringify(ipyMessage.makeStartMessage());
+      ipyWebsocketHandler.send(shellUrl, startMessage);
+      ipyWebsocketHandler.send(iopubUrl, startMessage);
+      ipyWebsocketHandler.send(stdinUrl, startMessage);
+    };
+    return ipyMessageHandler;
+  })
+  .factory('ipyMessage', function (_) {
     var ipyMessage = {};
 
     ipyMessage.configure = function (username, session) {
@@ -243,6 +240,6 @@ angular.module('ipyng.messageHandler', ['ipyng.websocket', 'ipyng.utils', 'ng.lo
     };
 
     return ipyMessage;
-  }])
+  })
   .value('ipyKernelPath', 'api/kernels/')
 ;

@@ -1,7 +1,6 @@
 describe("ipyKernel", function () {
   beforeEach(module('ipyng.messageHandler'));
   beforeEach(module('ipyng.kernel'));
-  beforeEach(module('ngMockE2E'));
 
   var $httpBackend, $q, $rootScope;
   var messageHandlerMock = function () {

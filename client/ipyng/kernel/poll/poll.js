@@ -1,5 +1,5 @@
 angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernel', 'ipyng.utils', 'ng.lodash']).
-  factory('ipyPoll', ['ipyKernel', '$interval', '_', function (ipyKernel, $interval, _) {
+  factory('ipyPoll', function (ipyKernel, $interval, _) {
     var ipyPoll = {};
     ipyPoll.expressions = {};
     ipyPoll.delays = Object.create(null);
@@ -61,5 +61,5 @@ angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernel', 'ipyng.utils', 'ng.l
       return _.keys(ipyPoll.expressions[kernelID]);
     };
     return ipyPoll;
-  }])
+  })
 ;
