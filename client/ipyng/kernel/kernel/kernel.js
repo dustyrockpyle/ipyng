@@ -2,30 +2,41 @@ angular.module('ipyng.kernel.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
   factory('ipyKernel', ['ipyMessageHandler', 'ipyMessage', 'ipyWatch', '$q', '$http', '_',
     function (ipyMessageHandler, ipyMessage, ipyWatch, $q, $http, _) {
       var kernel = {};
-      kernel.kernels = [];
+      kernel.kernels = {};
 
       kernel.retrieveStartedKernels = function () {
         return $http.get('/api/kernels/').then(
           function (response) {
+            var kernels = [];
             response.data.forEach(function (kernel_data) {
-              kernel.kernels.push(kernel_data.id);
+              kernels.push(kernel_data.id);
             });
+            return kernels;
           }
         );
       };
-      kernel.retrieveStartedKernels();
 
-      kernel.startKernel = function (kernelID, registryID) {
-        if (_.contains(kernel.kernels, kernelID)) {
+      kernel.startKernel = function (kernelID) {
+        if (_.has(kernel.kernels, kernelID)) {
           return $q.reject("KernelID already registered.");
         }
-
-        return $http.post('/api/startkernel/' + kernelID, null).then(
-          function (response) {
-            kernel.kernels.push(kernelID);
+        var deferred = $q.defer();
+        kernel.kernels[kernelID] = deferred.promise;
+        $http.post('/api/startkernel/' + kernelID, null)
+          .then(function (response) {
+            deferred.resolve(true);
             return true;
-          }
-        );
+          }).catch(function(error){
+            deferred.reject(error);
+          });
+        return deferred.promise;
+      };
+
+      kernel.getOrStartKernel = function(kernelID) {
+        if(_.has(kernel.kernels, kernelID)) {
+          return kernel.kernels[kernelID];
+        }
+        return kernel.startKernel(kernelID);
       };
 
       kernel.interruptKernel = function (kernelID) {
@@ -56,59 +67,56 @@ angular.module('ipyng.kernel.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
           });
         }
         var message = ipyMessage.makeExecuteMessage(code, silent, storeHistory, expressions, allowStdin);
-        var deferred = $q.defer();
-        ipyMessageHandler.sendShellRequest(kernelID, message).then(
-          function (message) {
-            var content = ipyMessage.getContent(message);
+        return kernel.getOrStartKernel(kernelID)
+          .then(function(){
+            return ipyMessageHandler.sendShellRequest(kernelID, message);
+          }).then(function (response) {
+            var content = ipyMessage.getContent(response);
             ipyWatch.getWatchedExpressions(kernelID).forEach(function (expression) {
               ipyWatch.setValue(kernelID, expression, content.user_expressions[expression]);
             });
-            deferred.resolve(message);
-          },
-          function (error) {
-            deferred.reject(error);
-          },
-          function (notification) {
-            deferred.notify(notification);
-          }
-        );
-        return deferred.promise;
+            return response;
+          });
       };
 
       kernel.evaluate = function (kernelID, expression) {
         var expressions = {};
         expressions[expression] = expression;
         var message = ipyMessage.makeExecuteMessage('', true, false, expressions, false);
-
-        return ipyMessageHandler.sendShellRequest(kernelID, message).then(
-          function (message) {
+        return kernel.getOrStartKernel(kernelID)
+          .then(function() {
+            return ipyMessageHandler.sendShellRequest(kernelID, message);
+          }).then(function (message) {
             return ipyMessage.getContent(message).user_expressions[expression];
-          }
-        );
+          });
       };
 
       kernel.inspect = function (kernelID, code, cursorPosition, detailLevel) {
         var message = ipyMessage.makeInspectMessage(code, cursorPosition, detailLevel);
-        return ipyMessageHandler.sendShellRequest(kernelID, message).then(
-          function (message) {
-            return ipyMessage.getContent(message);
-          }
-        );
+        return kernel.getOrStartKernel(kernelID)
+          .then(function(){
+            return ipyMessageHandler.sendShellRequest(kernelID, message);
+          }).then(function (response) {
+            return ipyMessage.getContent(response);
+          });
       };
 
       kernel.complete = function (kernelID, code, cursorPosition) {
         var message = ipyMessage.makeCompleteMessage(code, cursorPosition);
-        return ipyMessageHandler.sendShellRequest(kernelID, message).then(
-          function (message) {
+        return kernel.getOrStartKernel(kernelID)
+          .then(function(){
+            ipyMessageHandler.sendShellRequest(kernelID, message);
+          }).then(function (message) {
             return ipyMessage.getContent(message);
-          }
-        );
+          });
       };
 
       kernel.getHistory = function (kernelID, historyMessage) {
         var hasOutput = ipyMessage.getContent(historyMessage).output;
-        return ipyMessageHandler.sendShellRequest(kernelID, historyMessage).then(
-          function (message) {
+        return kernel.getOrStartKernel(kernelID)
+          .then(function(){
+            return ipyMessageHandler.sendShellRequest(kernelID, historyMessage);
+          }).then(function (message) {
             var content = ipyMessage.getContent(message);
             var history = [];
             var newHistoryLine;
@@ -125,8 +133,7 @@ angular.module('ipyng.kernel.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
               history.push(newHistoryLine);
             });
             return history;
-          }
-        );
+          });
       };
 
       kernel.historySearch = function (kernelID, pattern, numResults, getUnique, getOutput, getRaw) {
