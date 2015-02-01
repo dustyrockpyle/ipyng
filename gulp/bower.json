@@ -1,0 +1,17 @@
+{
+  "name": "ng-gulp-boilerplate",
+  "devDependencies": {
+    "angular": "~1.3",
+    "bootstrap": "~3.1",
+    "angular-bootstrap": "~0.12.0",
+    "angular-ui-router": "~0.2",
+    "lodash": "~2.4.1",
+    "angular-mocks": "~1.3.11"
+  },
+  "dependencies": {},
+  "resolutions": {
+    "angular": "~1.3",
+    "angular-bootstrap": "~0.12.0",
+    "angular-mocks": "~1.3.11"
+  }
+}

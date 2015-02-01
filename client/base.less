@@ -1,0 +1,11 @@
+{% for path in includes -%}
+@import "{{ path }}";
+{% endfor -%}
+
+{% for file in globs|glop -%}
+@import "{{ file.path }}";
+{% endfor -%}
+
+{% for var, val in vars %}
+@{{ var }}: "{{ val }}";
+{% endfor %}
