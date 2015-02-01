@@ -1,25 +1,34 @@
 angular.module('ipyng.websocket', ['ng.lodash'])
-  .factory('ipyWebsocketHandler', ['ipyWebsocket', '_', function (ipyWebsocket, _) {
+  .factory('ipyWebsocketHandler', function (ipyWebsocket, _, $q) {
     var websocketHandler = {connections: {}};
     var onmessageID = 'onmessageCallbacks';
     var oncloseID = 'oncloseCallbacks';
     var onopenID = 'onopenCallbcks';
     websocketHandler.create = function (url) {
       var ws = {};
-      ws.websocket = ipyWebsocket(url);
+      var websocket = new ipyWebsocket(url);
       ws[onmessageID] = {};
       ws[oncloseID] = {};
       ws[onopenID] = {};
-      websocketHandler.connections[url] = ws;
-      ws.websocket.onmessage = function (event) {
+      websocket.onmessage = function (event) {
         callAllCallbacks(url, onmessageID, event);
       };
-      ws.websocket.onclose = function (event) {
+      websocket.onclose = function (event) {
         callAllCallbacks(url, oncloseID, event);
       };
-      ws.websocket.onopen = function (event) {
+      websocket.onopen = function (event) {
         callAllCallbacks(url, onopenID, event);
       };
+
+      websocketHandler.connections[url] = ws;
+      var deferred = $q.defer();
+      ws.websocket = deferred.promise;
+      websocketHandler.registerCallback(url, onopenID, function(){
+        deferred.resolve(websocket);
+      });
+      websocketHandler.registerCallback(url, oncloseID, function(){
+        ws.websocket = $q.reject("Connection closed.");
+      });
       return ws;
     };
 
@@ -33,15 +42,15 @@ angular.module('ipyng.websocket', ['ng.lodash'])
 
     var callAllCallbacks = function (url, callback_type, event) {
       var callbacks = websocketHandler.connections[url][callback_type];
-      for (var prop in callbacks) {
-        if (callbacks.hasOwnProperty(prop)) {
-          callbacks[prop](event);
-        }
-      }
+      _.forEach(callbacks, function(callback){
+        callback(event);
+      });
     };
 
     websocketHandler.send = function (url, message) {
-      websocketHandler.getOrCreate(url).websocket.send(message);
+      websocketHandler.getOrCreate(url).websocket.then(function (websocket){
+        websocket.send(message);
+      });
     };
 
     websocketHandler.unregister = function (url, callback_type, callback_id) {
@@ -67,8 +76,8 @@ angular.module('ipyng.websocket', ['ng.lodash'])
     };
 
     return websocketHandler;
-  }])
-  .factory('ipyWebsocket', [function () {
+  })
+  .factory('ipyWebsocket', function () {
     if (typeof(WebSocket) !== 'undefined') {
       return WebSocket;
     } else if (typeof(MozWebSocket) !== 'undefined') {
@@ -77,5 +86,5 @@ angular.module('ipyng.websocket', ['ng.lodash'])
       alert('Your browser does not have WebSocket support, please try Chrome, Safari or Firefox ≥ 6. Firefox 4 and 5 are also supported by you have to enable WebSockets in about:config.');
       return null;
     }
-  }])
+  })
 ;
