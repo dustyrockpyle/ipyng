@@ -62,6 +62,17 @@ describe("ipyWebsocketHandler", function() {
     expect(websockets[1].url).toEqual("someOtherUrl");
   }));
 
+  it("should return a promise that's resolved after send", inject(function(ipyWebsocketHandler, $timeout, $rootScope){
+    var resolved = false;
+    ipyWebsocketHandler.send("someUrl", "someMessage")
+      .then(function(){
+        resolved = true;
+      });
+    $timeout.flush(50);
+    $rootScope.$apply();
+    expect(resolved).toBeTruthy();
+  }));
+
   it("should call all registered callbacks", inject(function(ipyWebsocketHandler, $timeout, $rootScope) {
     var called1 = "";
     var called2 = "";

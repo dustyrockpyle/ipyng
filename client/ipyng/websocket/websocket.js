@@ -48,9 +48,10 @@ angular.module('ipyng.websocket', ['ng.lodash'])
     };
 
     websocketHandler.send = function (url, message) {
-      websocketHandler.getOrCreate(url).websocket.then(function (websocket){
-        websocket.send(message);
-      });
+      return websocketHandler.getOrCreate(url).websocket
+        .then(function (websocket){
+          websocket.send(message);
+        });
     };
 
     websocketHandler.unregister = function (url, callback_type, callback_id) {
