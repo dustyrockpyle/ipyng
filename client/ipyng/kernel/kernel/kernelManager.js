@@ -1,7 +1,7 @@
-angular.module('ipyng.kernel.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
+angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ipyng.kernel.watch', 'ipyng.utils']).
   factory('ipyKernel', function (ipyMessageHandler, ipyMessage, ipyWatch, $q, $http, _) {
     var kernel = {};
-    kernel.kernels = {};
+    kernel.kernelGuids = {};
 
     kernel.retrieveStartedKernels = function () {
       return $http.get('/api/kernels/').then(
@@ -15,105 +15,110 @@ angular.module('ipyng.kernel.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
       );
     };
 
-    kernel.startKernel = function (kernelID) {
-      if (_.has(kernel.kernels, kernelID)) {
-        return $q.reject("KernelID already registered.");
-      }
-      var deferred = $q.defer();
-      kernel.kernels[kernelID] = deferred.promise;
-      $http.post('/api/startkernel/', null)
-        .then(function (response) {
-          deferred.resolve(response.data.id);
-          return true;
-        }).catch(function(error){
-          deferred.reject(error);
-        });
-      return deferred.promise;
+    var startKernel = function (kernelId) {
+      kernel.kernelGuids[kernelId] =
+        $http.post('/api/startkernel/', null)
+          .then(function (response) {
+            return kernel.connectKernel(kernelId, response.data.id);
+          });
+      return kernel.kernelGuids[kernelId];
     };
 
-    kernel.getOrStartKernel = function(kernelID) {
-      if(_.has(kernel.kernels, kernelID)) {
-        return kernel.kernels[kernelID];
-      }
-      return kernel.startKernel(kernelID);
+    kernel.getOrStartKernel = function(kernelId) {
+      if(_.has(kernel.kernelGuids, kernelId)) return kernel.kernelGuids[kernelId];
+      return startKernel(kernelId);
     };
 
-    kernel.interruptKernel = function (kernelID) {
-      return kernel.kernels[kernelID]
+    kernel.connectKernel = function(kernelId, kernelGuid) {
+      kernel.kernelGuids[kernelId] =
+        ipyMessageHandler.sendConnectRequest(kernelGuid)
+          .then(function(){
+            return kernelGuid;
+          });
+      return kernel.kernelGuids[kernelId];
+    };
+
+    kernel.interruptKernel = function (kernelId) {
+      return kernel.kernelGuids[kernelId]
         .then(function(kernelGuid){
           return $http.post('/api/kernels/interrupt/' + kernelGuid, null)
         });
     };
 
-    kernel.restartKernel = function (kernelID) {
-      return kernel.kernels[kernelID]
+    kernel.restartKernel = function (kernelId) {
+      return kernel.kernelGuids[kernelId]
         .then(function(kernelGuid){
           return $http.post('/api/kernels/restart/' + kernelGuid, null)
         });
     };
 
-    kernel.execute = function (kernelID, code, enableWatches, storeHistory, silent, allowStdin) {
+    kernel.execute = function (kernelId, code, enableWatches, storeHistory, silent, allowStdin) {
       enableWatches = _.isUndefined(enableWatches) ? true : enableWatches;
       storeHistory = _.isUndefined(storeHistory) ? true : storeHistory;
       silent = _.isUndefined(silent) ? false : silent;
       allowStdin = _.isUndefined(allowStdin) ? false : allowStdin;
       var expressions = {};
       if (enableWatches) {
-        ipyWatch.getWatchedExpressions(kernelID).forEach(function (expression) {
+        ipyWatch.getWatchedExpressions(kernelId).forEach(function (expression) {
           expressions[expression] = expression;
         });
       }
       var message = ipyMessage.makeExecuteMessage(code, silent, storeHistory, expressions, allowStdin);
-      return kernel.getOrStartKernel(kernelID)
+      return kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid){
           return ipyMessageHandler.sendShellRequest(kernelGuid, message);
-        }).then(function (response) {
+        })
+        .then(function (response) {
           var content = ipyMessage.getContent(response);
-          ipyWatch.getWatchedExpressions(kernelID).forEach(function (expression) {
-            ipyWatch.setValue(kernelID, expression, content.user_expressions[expression]);
+          _.forEach(ipyWatch.getWatchedExpressions(kernelId), function (expression) {
+            ipyWatch.setValue(kernelId, expression, content.user_expressions[expression]);
           });
           return response;
         });
     };
 
-    kernel.evaluate = function (kernelID, expression) {
+    kernel.evaluate = function (kernelId, expression) {
       var expressions = {};
       expressions[expression] = expression;
       var message = ipyMessage.makeExecuteMessage('', true, false, expressions, false);
-      return kernel.getOrStartKernel(kernelID)
+      return kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid) {
           return ipyMessageHandler.sendShellRequest(kernelGuid, message);
-        }).then(function (message) {
+        })
+        .then(function (message) {
           return ipyMessage.getContent(message).user_expressions[expression];
         });
     };
 
-    kernel.inspect = function (kernelID, code, cursorPosition, detailLevel) {
+    kernel.inspect = function (kernelId, code, cursorPosition, detailLevel) {
       var message = ipyMessage.makeInspectMessage(code, cursorPosition, detailLevel);
-      return kernel.getOrStartKernel(kernelID)
+      return kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid){
           return ipyMessageHandler.sendShellRequest(kernelGuid, message);
-        }).then(function (response) {
+        })
+        .then(function (response) {
           return ipyMessage.getContent(response);
         });
     };
 
-    kernel.complete = function (kernelID, code, cursorPosition) {
+    kernel.complete = function (kernelId, code, cursorPosition) {
       var message = ipyMessage.makeCompleteMessage(code, cursorPosition);
-      return kernel.getOrStartKernel(kernelID)
+      return kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid){
           ipyMessageHandler.sendShellRequest(kernelGuid, message);
-        }).then(function (message) {
+        })
+        .then(function (message) {
           return ipyMessage.getContent(message);
         });
     };
 
-    kernel.getHistory = function (kernelID, historyMessage) {
+    kernel.getHistory = function (kernelId, historyMessage) {
       var hasOutput = ipyMessage.getContent(historyMessage).output;
-      return kernel.getOrStartKernel(kernelID)
+      return kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid){
           return ipyMessageHandler.sendShellRequest(kernelGuid, historyMessage);
-        }).then(function (message) {
+        })
+        .then(function (message) {
           var content = ipyMessage.getContent(message);
           var history = [];
           var newHistoryLine;
@@ -133,25 +138,25 @@ angular.module('ipyng.kernel.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         });
     };
 
-    kernel.historySearch = function (kernelID, pattern, numResults, getUnique, getOutput, getRaw) {
+    kernel.historySearch = function (kernelId, pattern, numResults, getUnique, getOutput, getRaw) {
       getOutput = _.isUndefined(getOutput) ? true : getOutput;
       getRaw = _.isUndefined(getRaw) ? true : getRaw;
       getUnique = _.isUndefined(getUnique) ? false : getUnique;
-      var message = ipyMessage.makeHistoryMessage(getOutput, getRaw, 'search', null, null, null,
+      var message = ipyMessage.makeHistoryMessage(getOutput, getRaw, 'search', null, null,
         numResults, pattern, getUnique);
-      return kernel.getHistory(kernelID, message);
+      return kernel.getHistory(kernelId, message);
     };
 
-    kernel.historyRange = function (kernelID, start, stop, getOutput, getRaw) {
-      var message = ipyMessage.makeHistoryMessage(getOutput, getRaw, 'range', null, start, stop);
-      return kernel.getHistory(kernelID, message);
+    kernel.historyRange = function (kernelId, start, stop, getOutput, getRaw) {
+      var message = ipyMessage.makeHistoryMessage(getOutput, getRaw, 'range', start, stop);
+      return kernel.getHistory(kernelId, message);
     };
 
-    kernel.historyTail = function (kernelID, numResults, getOutput, getRaw) {
+    kernel.historyTail = function (kernelId, numResults, getOutput, getRaw) {
       getOutput = _.isUndefined(getOutput) ? true : getOutput;
       getRaw = _.isUndefined(getRaw) ? true : getRaw;
-      var message = ipyMessage.makeHistoryMessage(getOutput, getRaw, 'tail', null, null, null, numResults);
-      return kernel.getHistory(kernelID, message);
+      var message = ipyMessage.makeHistoryMessage(getOutput, getRaw, 'tail', null, null, numResults);
+      return kernel.getHistory(kernelId, message);
     };
 
     return kernel;

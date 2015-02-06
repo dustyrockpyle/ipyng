@@ -1,4 +1,4 @@
-angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernel', 'ipyng.utils', 'ng.lodash']).
+angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernelManager', 'ipyng.utils', 'ng.lodash']).
   factory('ipyPoll', function (ipyKernel, $interval, _) {
     var ipyPoll = {};
     ipyPoll.expressions = {};
@@ -36,9 +36,10 @@ angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernel', 'ipyng.utils', 'ng.l
         $interval.cancel(thisPoll.interval);
       }
       thisPoll.interval = $interval(function () {
-        ipyKernel.evaluate(kernelID, expression).then(function (result) {
-          ipyPoll.setValue(kernelID, expression, result);
-        });
+        ipyKernel.evaluate(kernelID, expression)
+          .then(function (result) {
+            ipyPoll.setValue(kernelID, expression, result);
+          });
       }, minDelay);
     };
 
