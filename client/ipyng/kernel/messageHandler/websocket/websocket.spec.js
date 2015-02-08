@@ -1,7 +1,6 @@
 describe("ipyWebsocketHandler", function() {
-  beforeEach(module('ipyng.websocket'));
+  beforeEach(module('ipyng.kernel.messageHandler.websocket'));
   beforeEach(module('ipyng.utils'));
-  beforeEach(module('ipyng.messageHandler'));
 
 
   var websocketMock = function($timeout) {

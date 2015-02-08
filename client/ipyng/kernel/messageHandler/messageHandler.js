@@ -1,4 +1,4 @@
-angular.module('ipyng.kernel.messageHandler', ['ipyng.websocket', 'ipyng.utils', 'ng.lodash'])
+angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.websocket', 'ipyng.utils', 'ng.lodash'])
   .factory('ipySessionId', function(_){
     return _.uniqueId();
   })
@@ -40,20 +40,20 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.websocket', 'ipyng.utils',
 
     ipyMessageHandler.handleShellReply = function (event) {
       var message, parentID;
-      message = event.data;
+      message = JSON.parse(event.data);
       parentID = ipyMessage.getParentMessageID(message);
       deferredRequests[parentID].resolve(message);
       delete deferredRequests[parentID];
     };
 
     ipyMessageHandler.handleIopubMessage = function (event) {
-      var message = event.data;
+      var message = JSON.parse(event.data);
       var parentID = ipyMessage.getParentMessageID(message);
       deferredRequests[parentID].notify(message);
     };
 
     ipyMessageHandler.handleStdinRequest = function (event) {
-      var message = event.data;
+      var message = JSON.parse(event.data);
       var parentID = ipyMessage.getParentMessageID(message);
       deferredRequests[parentID].notify(message);
     };

@@ -1,4 +1,4 @@
-angular.module('ipyng.websocket', ['ng.lodash'])
+angular.module('ipyng.kernel.messageHandler.websocket', ['ng.lodash'])
   .factory('ipyWebsocketHandler', function (ipyWebsocket, _, $q) {
     var websocketHandler = {connections: {}};
     var onmessageID = 'onmessageCallbacks';

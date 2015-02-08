@@ -6,7 +6,7 @@ describe("ipyMessageHandler", function() {
     var mock = {};
 
     mock.send = function(url, message){
-      mock.messages.push({'url': url, 'message': message});
+      mock.messages.push({'url': url, 'message': JSON.parse(message)});
     };
     mock.registerOnMessageCallback = function(url, callback) {
       mock.callbacks[url] = callback;
@@ -21,7 +21,7 @@ describe("ipyMessageHandler", function() {
   };
 
   var makeEvent = function (data) {
-    return {'data': data};
+    return {'data': JSON.stringify(data)};
   };
 
   var notifications = [];
@@ -59,9 +59,9 @@ describe("ipyMessageHandler", function() {
       var message2 = ipyMessage.makeMessage("test2");
       var message2Header = ipyMessage.getHeader(message2);
       var promise1 = ipyMessageHandler.sendShellRequest(kernelID, message1);
-      expect(ipyWebsocketHandler.messages.pop().message).toEqual(JSON.stringify(message1));
+      expect(ipyWebsocketHandler.messages.pop().message).toEqual(message1);
       var promise2 = ipyMessageHandler.sendShellRequest(kernelID, message2);
-      expect(ipyWebsocketHandler.messages.pop().message).toEqual(JSON.stringify(message2));
+      expect(ipyWebsocketHandler.messages.pop().message).toEqual(message2);
 
       promise1.then(resolve, null, notify);
       var shellUrl = ipyMessageHandler.shellUrl(kernelID);
