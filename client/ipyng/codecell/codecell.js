@@ -1,4 +1,4 @@
-angular.module('ipyng.codecell', ['ipyng.kernel'])
+angular.module('ipyng.codecell', ['ipyng.kernel', 'templates'])
   .directive('ipyCodecell', ['ipyKernel', function (ipyKernel) {
     return {
       templateUrl: 'codecell.tpl.html',
@@ -7,9 +7,9 @@ angular.module('ipyng.codecell', ['ipyng.kernel'])
         $scope.result = "";
         $scope.input = "";
         $scope.execute = function () {
-          ipyKernel.execute("testID", $scope.input)
+          ipyKernel.evaluate("testID", $scope.input)
             .then(function (result) {
-              $scope.result = result;
+              $scope.result = result.data["text/plain"];
             });
         };
       }
