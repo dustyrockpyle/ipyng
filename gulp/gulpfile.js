@@ -49,7 +49,7 @@ if(argv.config) {
   whichConfig = formatPath(argv.config);
 }
 else{
-  whichConfig = formatPath('gulpconfig.yaml');
+  whichConfig = formatPath('../config.yaml');
 }
 
 root = fix_slashes(path.dirname(whichConfig)) + '/';
@@ -58,7 +58,7 @@ var schema = createSchema(root);
 
 
 var makeConfig = function(){
-  var configFile = fs.readFileSync(whichConfig, encoding = 'utf-8');
+  var configFile = fs.readFileSync(whichConfig, 'utf-8');
   config = yaml.load(configFile, { schema: schema});
   client = config.paths.client;
   vendor = config.paths.vendor;

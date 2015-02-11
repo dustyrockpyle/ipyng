@@ -41,14 +41,14 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
     kernel.interruptKernel = function (kernelId) {
       return kernel.kernelGuids[kernelId]
         .then(function(kernelGuid){
-          return $http.post('/api/kernels/interrupt/' + kernelGuid, null)
+          return $http.post('/api/kernels/interrupt/' + kernelGuid, null);
         });
     };
 
     kernel.restartKernel = function (kernelId) {
       return kernel.kernelGuids[kernelId]
         .then(function(kernelGuid){
-          return $http.post('/api/kernels/restart/' + kernelGuid, null)
+          return $http.post('/api/kernels/restart/' + kernelGuid, null);
         });
     };
 
