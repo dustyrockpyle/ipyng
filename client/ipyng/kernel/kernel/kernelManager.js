@@ -3,6 +3,8 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
     var kernel = {};
     kernel.kernelGuids = {};
 
+    kernel.kernelStatus = {};
+
     kernel.retrieveStartedKernels = function () {
       return $http.get('/api/kernels/').then(
         function (response) {
@@ -52,6 +54,15 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
         });
     };
 
+    var handleNotify = function(kernelId, callback) {
+      return function(message){
+        if(ipyMessage.getMessageType(message) == "status"){
+          kernel.kernelStatus[kernelId] = ipyMessage.getContent(message).execution_state;
+        }
+        if(!_.isUndefined(callback)) callback(message);
+      };
+    };
+
     kernel.execute = function (kernelId, code, enableWatches, storeHistory, silent, allowStdin) {
       enableWatches = _.isUndefined(enableWatches) ? true : enableWatches;
       storeHistory = _.isUndefined(storeHistory) ? true : storeHistory;
@@ -64,7 +75,8 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
         });
       }
       var message = ipyMessage.makeExecuteMessage(code, silent, storeHistory, expressions, allowStdin);
-      return kernel.getOrStartKernel(kernelId)
+      var deferred = $q.defer();
+      kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid){
           return ipyMessageHandler.sendShellRequest(kernelGuid, message);
         })
@@ -74,20 +86,22 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
             ipyWatch.setValue(kernelId, expression, content.user_expressions[expression]);
           });
           return response;
-        });
+        }, null, handleNotify(kernelId, function(message){
+          var msg_type = ipyMessage.getMessageType(message);
+          var content = ipyMessage.getContent(message);
+          if (msg_type == "stream"){
+            deferred.notify(content.data);
+          }
+          else if (msg_type == "pyout") {
+            content.text = content.data['text/plain'];
+            deferred.resolve(content);
+          }
+        }));
+      return deferred.promise;
     };
 
     kernel.evaluate = function (kernelId, expression) {
-      var expressions = {};
-      expressions[expression] = expression;
-      var message = ipyMessage.makeExecuteMessage('', true, false, expressions, false);
-      return kernel.getOrStartKernel(kernelId)
-        .then(function(kernelGuid) {
-          return ipyMessageHandler.sendShellRequest(kernelGuid, message);
-        })
-        .then(function (message) {
-          return ipyMessage.getContent(message).user_expressions[expression];
-        });
+      return kernel.execute(kernelId, expression, false, false, true, false);
     };
 
     kernel.inspect = function (kernelId, code, cursorPosition, detailLevel) {

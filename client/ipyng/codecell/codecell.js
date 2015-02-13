@@ -4,12 +4,18 @@ angular.module('ipyng.codecell', ['ipyng.kernel', 'templates'])
       templateUrl: 'codecell.tpl.html',
       restrict: 'E',
       controller: function ($scope) {
-        $scope.result = "";
+        $scope.result = [];
         $scope.input = "";
         $scope.execute = function () {
-          ipyKernel.evaluate("testID", $scope.input)
+          $scope.result = [];
+          ipyKernel.execute("testID", $scope.input)
             .then(function (result) {
-              $scope.result = result.data["text/plain"];
+              console.log("execute finished");
+              $scope.result.push(result.text);
+            }, null,
+            function(message){
+              console.log(message);
+              $scope.result.push(message);
             });
         };
       }

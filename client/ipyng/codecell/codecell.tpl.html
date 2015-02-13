@@ -1,6 +1,6 @@
 <div>
-    <input ng-model="input">
+    <textarea ng-model="input"></textarea>
     <button ng-click="execute()">Execute</button>
     <br/>
-    <p ng-bind="result"></p>
+    <p ng-repeat="text in result">{{text}}</p>
 </div>
