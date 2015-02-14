@@ -123,7 +123,15 @@ gulp.task('watch', function () {
   connect.server({
     root: config.paths.build,
     livereload: true,
-    port: config.port
+    port: config.port,
+    middleware: function(connect, opt){
+      return [
+        function(req, res, next){
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          next();
+        }
+      ]
+    }
   });
 
   var watches = [];
