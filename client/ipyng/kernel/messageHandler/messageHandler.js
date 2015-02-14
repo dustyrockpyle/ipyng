@@ -145,6 +145,20 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
       return ipyMessage.makeMessage('execute_result', content, parentHeader);
     };
 
+    ipyMessage.makeIopubStream = function(data, parentHeader) {
+      var content = {
+        data: data
+      };
+      return ipyMessage.makeMessage('stream', content, parentHeader)
+    };
+
+    ipyMessage.makeIopubOut = function(data, parentHeader) {
+      var content = {
+        data: data
+      };
+      return ipyMessage.makeMessage('pyout', content, parentHeader);
+    };
+
     ipyMessage.makeInspectMessage = function (code, cursorPosition, detailLevel) {
       detailLevel = _.isUndefined(detailLevel) ? 0 : detailLevel;
       var content = {

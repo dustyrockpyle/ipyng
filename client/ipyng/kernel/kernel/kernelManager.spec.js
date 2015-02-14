@@ -120,7 +120,7 @@ describe("ipyKernel", function () {
 
     describe("execute", function () {
       it("should send a shell request to the specified kernel containing the sent code,  " +
-        "notify with iopub messages, and resolve with the execute reply",
+        "notify with iopub stream messages, and resolve with the execute reply",
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
           var code = "this is some code";
           var promise = ipyKernel.execute(kernel1Id, code);
@@ -133,27 +133,34 @@ describe("ipyKernel", function () {
           var executeResult = null;
           var iopubMessages = [];
           promise.then(function (result) {
-            executeResult = result;
-          }, null, function (iopubMessage) {
-            iopubMessages.push(iopubMessage);
-          });
+              executeResult = result;
+            }, null,
+            function (iopubMessage) {
+              iopubMessages.push(iopubMessage);
+            });
 
-          var data = {'application/json': 'somemessage'};
-          var firstMessage = ipyMessage.makeExecuteResult(1, data, {}, ipyMessage.getHeader(sentMessage));
+          var parentHeader = ipyMessage.getHeader(sentMessage);
+          var data = {'text/plain': 'somemessage'};
+          var firstMessage = ipyMessage.makeIopubStream(data, parentHeader);
           ipyMessageHandler.notify(firstMessage);
           $rootScope.$apply();
-          expect(iopubMessages[0]).toEqual(firstMessage);
 
-          var data2 = {'application/json': 'somemessage2'};
-          var secondMessage = ipyMessage.makeExecuteResult(1, data2, {}, ipyMessage.getHeader(sentMessage));
+          expect(iopubMessages[0].text).toEqual(data['text/plain']);
+
+          var data2 = {'text/plain': 'somemessage2'};
+          var secondMessage = ipyMessage.makeIopubStream(data2, parentHeader);
           ipyMessageHandler.notify(secondMessage);
           $rootScope.$apply();
-          expect(iopubMessages[1]).toEqual(secondMessage);
+          expect(iopubMessages[1].text).toEqual(data2['text/plain']);
+
+          var out = {'text/plain': 'the output'};
+          var outMessage = ipyMessage.makeIopubOut(out, parentHeader);
+          ipyMessageHandler.notify(outMessage);
 
           var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
           ipyMessageHandler.resolve(response);
           $rootScope.$apply();
-          expect(executeResult).toEqual(response);
+          expect(executeResult.text).toEqual(out['text/plain']);
         })
       );
 
@@ -226,11 +233,11 @@ describe("ipyKernel", function () {
           });
           $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
-          expect(content.user_expressions[expression]).toEqual(expression);
+          expect(content.user_expressions[0]).toEqual(expression);
 
           var expressionResult = "this is the result of the expression";
           var user_expressions = {};
-          user_expressions[expression] = expressionResult;
+          user_expressions[0] = expressionResult;
           var message = ipyMessage.makeExecuteReply('ok', 1, user_expressions);
           ipyMessageHandler.resolve(message);
           $rootScope.$apply();

@@ -89,19 +89,34 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
         }, null, handleNotify(kernelId, function(message){
           var msg_type = ipyMessage.getMessageType(message);
           var content = ipyMessage.getContent(message);
+          content.data.text = content.data['text/plain'];
           if (msg_type == "stream"){
             deferred.notify(content.data);
           }
           else if (msg_type == "pyout") {
-            content.text = content.data['text/plain'];
-            deferred.resolve(content);
+            deferred.resolve(content.data);
           }
         }));
       return deferred.promise;
     };
 
-    kernel.evaluate = function (kernelId, expression) {
-      return kernel.execute(kernelId, expression, false, false, true, false);
+    kernel.evaluate = function (kernelId, expressions) {
+      var isArray = _.isArray(expressions);
+      if(!isArray) expressions = [expressions];
+      var expressionContent = {};
+      _.forEach(expressions, function(expression, index){
+        expressionContent[index] = expression;
+      });
+      var message = ipyMessage.makeExecuteMessage('', true, false, expressionContent, false);
+      return kernel.getOrStartKernel(kernelId)
+        .then(function(kernelGuid){
+          return ipyMessageHandler.sendShellRequest(kernelGuid, message);
+        })
+        .then(function(response){
+          var result = _.values(ipyMessage.getContent(response).user_expressions);
+          if(isArray) return result;
+          return result[0];
+        });
     };
 
     kernel.inspect = function (kernelId, code, cursorPosition, detailLevel) {
