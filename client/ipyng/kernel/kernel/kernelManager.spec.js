@@ -157,10 +157,15 @@ describe("ipyKernel", function () {
           var outMessage = ipyMessage.makeIopubOut(out, parentHeader);
           ipyMessageHandler.notify(outMessage);
 
+          var display = {'image/png': 'arbitrarypng'};
+          var displayMessage = ipyMessage.makeIopubDisplay(display, parentHeader);
+          ipyMessageHandler.notify(displayMessage);
+
           var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
           ipyMessageHandler.resolve(response);
           $rootScope.$apply();
           expect(executeResult.text).toEqual(out['text/plain']);
+          expect(executeResult['image/png']).toEqual(display['image/png']);
         })
       );
 

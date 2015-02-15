@@ -76,6 +76,7 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
       }
       var message = ipyMessage.makeExecuteMessage(code, silent, storeHistory, expressions, allowStdin);
       var deferred = $q.defer();
+      var result = {};
       kernel.getOrStartKernel(kernelId)
         .then(function(kernelGuid){
           return ipyMessageHandler.sendShellRequest(kernelGuid, message);
@@ -85,16 +86,17 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
           _.forEach(ipyWatch.getWatchedExpressions(kernelId), function (expression) {
             ipyWatch.setValue(kernelId, expression, content.user_expressions[expression]);
           });
-          return response;
+          deferred.resolve(result);
         }, null, handleNotify(kernelId, function(message){
           var msg_type = ipyMessage.getMessageType(message);
           var content = ipyMessage.getContent(message);
-          content.data.text = content.data['text/plain'];
           if (msg_type == "stream"){
+            content.data.text = content.data['text/plain'];
             deferred.notify(content.data);
           }
-          else if (msg_type == "pyout") {
-            deferred.resolve(content.data);
+          else if (msg_type == "pyout" || msg_type == "display_data") {
+            if(!_.isUndefined(content.data['text/plain'])) content.data.text = content.data['text/plain'];
+            _.assign(result, content.data);
           }
         }));
       return deferred.promise;

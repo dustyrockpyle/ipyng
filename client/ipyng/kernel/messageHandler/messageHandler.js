@@ -159,6 +159,13 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
       return ipyMessage.makeMessage('pyout', content, parentHeader);
     };
 
+    ipyMessage.makeIopubDisplay = function(data, parentHeader) {
+      var content = {
+        data: data
+      };
+      return ipyMessage.makeMessage('display_data', content, parentHeader);
+    };
+
     ipyMessage.makeInspectMessage = function (code, cursorPosition, detailLevel) {
       detailLevel = _.isUndefined(detailLevel) ? 0 : detailLevel;
       var content = {
