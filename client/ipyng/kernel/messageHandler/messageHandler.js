@@ -5,7 +5,7 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
   .factory('ipyUsername', function(){
     return '';
   })
-  .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils, $location, $q, _) {
+  .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils, $location, $q, _, $timeout) {
     var ipyMessageHandler = {};
 
     ipyMessageHandler.wsUrl = function (kernelGuid, endpoint) {
@@ -43,7 +43,9 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
       message = JSON.parse(event.data);
       parentID = ipyMessage.getParentMessageID(message);
       deferredRequests[parentID].resolve(message);
-      delete deferredRequests[parentID];
+      $timeout(function(){ delete deferredRequests[parentID];}, 2000);
+      // Not totally happy with this; but it seems status message can be sent after execute_reply is received,
+      // should probably have kernel manager inform the message handler when it's ok to delete the promise;
     };
 
     ipyMessageHandler.handleIopubMessage = function (event) {
@@ -149,7 +151,7 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
       var content = {
         data: data
       };
-      return ipyMessage.makeMessage('stream', content, parentHeader)
+      return ipyMessage.makeMessage('stream', content, parentHeader);
     };
 
     ipyMessage.makeIopubOut = function(data, parentHeader) {

@@ -41,28 +41,6 @@ apps:
             paths:
                 - !join [*vendor, bootstrap/less]
             dest: !join [*build, ipyng/styles.css]
-
-        html:
-            scripts: &scripts !flatten
-                - !prepend
-                    - !join [*vendor, "@()"]
-                    - angular/angular.js
-                    - lodash/dist/lodash.js
-                    - angular-ui-router/release/angular-ui-router.js
-                    - angular-bootstrap/ui-bootstrap-tpls.js
-                - !join [*client, "@()ng-lodash/ng-lodash.js"]
-                - !join [*client, "@()ipyng/**/*.js"]
-                - !join ["!", *client, "**/*.spec.js"]
-            watch: !flatten
-                - !join [*client, base.html]
-                - !join [*client, ipyng/index.html]
-                - *scripts
-            template: !join [*client, ipyng/index.html]
-            static_url: *static_url
-            includes:
-                - ipyng/ipyng.tpl.js
-                - ipyng/styles.css
-            dest: !join [*build, ipyng/index.html]
         karma:
             files:
                 - !join [*build, angular/angular.js]
@@ -74,12 +52,6 @@ apps:
                 - !join [*client, ipyng/**/*.tpl.html]
             dest: !join [*build, ipyng/ipyng.tpl.js]
 
-        copy:
-            src:
-                - !join [*vendor, bootstrap/fonts/*.*]
-            dest:
-                - !join [*build, fonts/]
-
     test:
         html:
             scripts: &scripts2 !flatten
@@ -87,18 +59,25 @@ apps:
                     - !join [*vendor, "@()"]
                     - angular/angular.js
                     - lodash/dist/lodash.js
+                    - angular-bootstrap/ui-bootstrap-tpls.js
+                    - codemirror/lib/codemirror.js
+                    - codemirror/mode/python/python.js
+                    - angular-ui-codemirror/ui-codemirror.js
                 - !join [*client, "@()ng-lodash/ng-lodash.js"]
-                - !join [*client, "**/*.js"]
+                - !join [*client, "@()ipyng/**/*.js"]
+                - !join [*client, "@()test/**/*.js"]
                 - !join ["!", *client, "**/*.spec.js"]
             watch: !flatten
-                - !join [*client, test/index.html]
+                - !join [*client, test/**/*.js]
                 - !join [*client, base.html]
+                - !join [*client, test/index.html]
                 - *scripts2
             template: !join [*client, test/index.html]
-            static_url: "/"
+            static_url: "http://localhost:9000/"
             includes:
-                - test/styles.css
                 - ipyng/ipyng.tpl.js
+                - codemirror/lib/codemirror.css
+                - test/styles.css
             dest: !join [*build, test/index.html]
         less:
             watch:
@@ -115,3 +94,10 @@ apps:
             paths:
                 - !join [*vendor, bootstrap/less]
             dest: !join [*build, test/styles.css]
+        copy:
+            src:
+                - !join [*vendor, bootstrap/fonts/*.*]
+                - !join [*vendor, "@()codemirror/lib/codemirror.css"]
+            dest:
+                - !join [*build, fonts/]
+                - *build

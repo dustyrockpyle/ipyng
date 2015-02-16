@@ -1,6 +1,24 @@
-<div>
-    <textarea ng-model="input"></textarea>
-    <button ng-click="execute()">Execute</button>
-    <br/>
-    <p ng-repeat="text in result">{{text}}</p>
+<div class="codecell">
+    <div class="input">
+        <div class="prompt">In [{{ executionCount||' ' }}]:</div>
+        <div class="code-area">
+            <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="input"></ui-codemirror>
+        </div>
+    </div>
+    <div class="output" ng-show="stream.length || result">
+        <div class="prompt prompt-overlay"></div>
+        <div class="display-area">
+            <div class="stream" ng-show="stream">
+                <div class="display-line">
+                    <div class="prompt"></div>
+                    <pre class="result">{{ stream }}</pre>
+                </div>
+            </div>
+            <div class="pyout display-line" ng-show="result.text">
+                <div class="prompt">Out[{{ executionCount||' ' }}]:</div>
+                <pre class="result">{{ result.text }}</pre>
+            </div>
+        </div>
+    </div>
 </div>
+<button ng-click="execute()">Execute</button>

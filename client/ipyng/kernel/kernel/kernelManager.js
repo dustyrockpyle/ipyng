@@ -96,6 +96,7 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
           }
           else if (msg_type == "pyout" || msg_type == "display_data") {
             if(!_.isUndefined(content.data['text/plain'])) content.data.text = content.data['text/plain'];
+            _.assign(result, content);
             _.assign(result, content.data);
           }
         }));
