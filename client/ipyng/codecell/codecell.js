@@ -3,6 +3,9 @@ angular.module('ipyng.codecell', ['ipyng.kernel', 'templates', 'ui.codemirror'])
     return {
       templateUrl: 'codecell.tpl.html',
       restrict: 'E',
+      scope: {
+        kernelId: '@'
+      },
       controller: function ($scope) {
         $scope.result = null;
         $scope.stream = '';
@@ -11,7 +14,7 @@ angular.module('ipyng.codecell', ['ipyng.kernel', 'templates', 'ui.codemirror'])
           $scope.result = null;
           $scope.stream = '';
           $scope.executionCount = '*';
-          ipyKernel.execute("testID", $scope.input)
+          ipyKernel.execute($scope.kernelId, $scope.input)
             .then(function (result) {
               console.log("execute finished");
               $scope.result = result;
