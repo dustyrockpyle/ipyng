@@ -13,7 +13,7 @@ from tornado import web
 from tornado.log import app_log
 
 from IPython.html.services.kernels.handlers import (
-    KernelHandler, KernelActionHandler, IOPubHandler, ShellHandler, StdinHandler)
+    KernelHandler, KernelActionHandler, ZMQChannelsHandler)
 
 from IPython.html.services.kernels.handlers import _kernel_action_regex, _kernel_id_regex
 
@@ -43,9 +43,7 @@ class WebApp(web.Application):
             (r"/api/startkernel/", StartKernelHandler),
             (r"/api/kernels/%s" % _kernel_id_regex, KernelHandler),
             (r"/api/kernels/%s/%s" % (_kernel_id_regex, _kernel_action_regex), KernelActionHandler),
-            (r"/api/kernels/%s/iopub" % _kernel_id_regex, IOPubHandler),
-            (r"/api/kernels/%s/shell" % _kernel_id_regex, ShellHandler),
-            (r"/api/kernels/%s/stdin" % _kernel_id_regex, StdinHandler),
+            (r"/api/kernels/%s/channels" % _kernel_id_regex, ZMQChannelsHandler),
             (r"/(.*)", web.StaticFileHandler, dict(path=os.path.join(os.path.dirname(__file__), r'../build')))
         ]
 

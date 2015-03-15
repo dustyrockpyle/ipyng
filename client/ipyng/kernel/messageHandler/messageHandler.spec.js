@@ -40,12 +40,11 @@ describe("ipyMessageHandler", function() {
     resolveMessage = null;
   }));
 
-  it("should send session info and register callbacks to iopub/shell/stdin", inject(
+  it("should register the channel callback", inject(
     function (ipyMessageHandler, ipyWebsocketHandler) {
       ipyWebsocketHandler.reset();
-      ipyMessageHandler.sendConnectRequest("1");
-      expect(ipyWebsocketHandler.messages.length).toEqual(3);
-      expect(Object.keys(ipyWebsocketHandler.callbacks).length).toEqual(3);
+      ipyMessageHandler.registerChannel("1");
+      expect(Object.keys(ipyWebsocketHandler.callbacks).length).toEqual(1);
     }
   ));
 
@@ -53,7 +52,7 @@ describe("ipyMessageHandler", function() {
   it("should send a message, return a promise, notify and resolve that promise", inject(
     function (ipyMessageHandler, ipyWebsocketHandler, ipyMessage, $rootScope) {
       var kernelID = "1";
-      ipyMessageHandler.sendConnectRequest(kernelID);
+      ipyMessageHandler.registerChannel(kernelID);
       var message1 = ipyMessage.makeMessage("test1");
       var message1Header = ipyMessage.getHeader(message1);
       var message2 = ipyMessage.makeMessage("test2");
@@ -64,24 +63,28 @@ describe("ipyMessageHandler", function() {
       expect(ipyWebsocketHandler.messages.pop().message).toEqual(message2);
 
       promise1.then(resolve, null, notify);
-      var shellUrl = ipyMessageHandler.shellUrl(kernelID);
-      var iopubUrl = ipyMessageHandler.iopubUrl(kernelID);
-      var stdinUrl = ipyMessageHandler.stdinUrl(kernelID);
+      var url = ipyMessageHandler.channelUrl(kernelID);
 
-      var iopubMessage = ipyMessage.makeMessage('test3', {}, message1Header);
-      ipyWebsocketHandler.callbacks[iopubUrl](makeEvent(iopubMessage));
+      var iopubMessage = ipyMessage.makeMessage('test3', {}, message1Header, 'iopub');
+      ipyWebsocketHandler.callbacks[url](makeEvent(iopubMessage));
       $rootScope.$apply();
       expect(notifications.pop()).toEqual(iopubMessage);
 
-      var stdinMessage = ipyMessage.makeMessage('test4', {}, message1Header);
-      ipyWebsocketHandler.callbacks[stdinUrl](makeEvent(stdinMessage));
+      var stdinMessage = ipyMessage.makeMessage('test4', {}, message1Header, 'stdin');
+      ipyWebsocketHandler.callbacks[url](makeEvent(stdinMessage));
       $rootScope.$apply();
       expect(notifications.pop()).toEqual(stdinMessage);
 
       expect(resolveMessage).toBeNull();
-      var shellMessage = ipyMessage.makeMessage('test5', {}, message1Header);
-      ipyWebsocketHandler.callbacks[shellUrl](makeEvent(shellMessage));
+      var shellMessage = ipyMessage.makeMessage('test5', {}, message1Header, 'shell');
+      ipyWebsocketHandler.callbacks[url](makeEvent(shellMessage));
       $rootScope.$apply();
+
+      expect(resolveMessage).toBeNull();
+      var idleMessage = ipyMessage.makeStatusReply('idle', message1Header);
+      ipyWebsocketHandler.callbacks[url](makeEvent(idleMessage));
+      $rootScope.$apply();
+      expect(notifications.pop()).toEqual(idleMessage);
       expect(resolveMessage).toEqual(shellMessage);
     }
   ));

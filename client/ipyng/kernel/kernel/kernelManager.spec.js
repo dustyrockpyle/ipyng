@@ -2,7 +2,7 @@ describe("ipyKernel", function () {
   beforeEach(module('ipyng.messageHandler'));
   beforeEach(module('ipyng.kernel.kernelManager'));
 
-  var $httpBackend, $q, $rootScope;
+  var $httpBackend, $q, $rootScope, ipyMessage;
   var messageHandlerMock = function () {
     var mock = {};
 
@@ -10,9 +10,11 @@ describe("ipyKernel", function () {
       mock.deferred = null;
       mock.kernelId = null;
       mock.message = null;
+      mock.subscribed = {};
     };
 
     mock.resolve = function (result) {
+      mock.notify(ipyMessage.makeStatusReply('idle', ipyMessage.getParentHeader(result)));
       mock.deferred.resolve(result);
     };
 
@@ -24,11 +26,17 @@ describe("ipyKernel", function () {
       mock.deferred = $q.defer();
       mock.kernelId = kernelId;
       mock.message = message;
+      if(ipyMessage.getMessageType(message) == 'kernel_info_request')
+        mock.resolve(ipyMessage.makeMessage('kernel_info_reply', {}, ipyMessage.getParentHeader(message)));
       return mock.deferred.promise;
     };
 
-    mock.sendConnectRequest = function (kernelGuid) {
-      return $q.when([true, true, true]);
+    mock.registerChannel = function (kernelGuid) {
+      mock.subscribed[kernelGuid] = true;
+      var unsubscribe = function(){
+        mock.subscribed[kernelGuid] = false;
+      };
+      return unsubscribe;
     };
 
     return mock;
@@ -38,10 +46,11 @@ describe("ipyKernel", function () {
     $provide.factory("ipyMessageHandler", messageHandlerMock);
   }));
 
-  beforeEach(inject(function (_$httpBackend_, _$q_, ipyMessageHandler, _$rootScope_) {
+  beforeEach(inject(function (_$httpBackend_, _$q_, ipyMessageHandler, _$rootScope_, _ipyMessage_) {
     $httpBackend = _$httpBackend_;
     $q = _$q_;
     $rootScope = _$rootScope_;
+    ipyMessage = _ipyMessage_;
     ipyMessageHandler.reset();
   }));
 
@@ -67,26 +76,22 @@ describe("ipyKernel", function () {
   });
 
   describe("api function", function () {
-    beforeEach(inject(function(){
+    beforeEach(inject(function(ipyMessageHandler){
       $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel1Guid});
     }));
 
     describe('startKernel', function(){
       it("should post to /api/startkernel/ when starting kernel", inject(function (ipyKernel) {
-        ipyKernel.getOrStartKernel(kernel1Id);
+        ipyKernel.startKernel(kernel1Id);
       }));
 
       it("should resolve the kernel promise after response from /api/startkernel/", inject(function (ipyKernel) {
-        ipyKernel.getOrStartKernel(kernel1Id);
-        $rootScope.$apply();
-        expect(ipyKernel.kernelGuids[kernel1Id]).toBeDefined();
-        expect(ipyKernel.kernelGuids[kernel1Id].$$state.status).toBe(pending);
-        $httpBackend.flush();
         var kernelGuid;
-        ipyKernel.kernelGuids[kernel1Id]
-          .then(function(guid){
-            kernelGuid = guid;
+        ipyKernel.startKernel(kernel1Id)
+          .then(function(kernel){
+            kernelGuid = kernel.guid;
           });
+        $httpBackend.flush();
         $rootScope.$apply();
         expect(kernelGuid).toEqual(kernel1Guid);
       }));
@@ -95,7 +100,8 @@ describe("ipyKernel", function () {
     describe('interruptKernel', function(){
       it("should post to /api/kernels/interrupt/{kernelGuid} when interrupting a kernel", inject(
         function (ipyKernel) {
-          ipyKernel.getOrStartKernel(kernel1Id);
+          ipyKernel.startKernel(kernel1Id);
+          $httpBackend.flush();
           $httpBackend.expectPOST('/api/kernels/interrupt/' + kernel1Guid).respond({});
           ipyKernel.interruptKernel(kernel1Id);
           $httpBackend.flush();
@@ -105,7 +111,8 @@ describe("ipyKernel", function () {
 
     describe('restartKernel', function(){
       it("should post to /api/kernels/restart/{kernelGuid} when restarting a kernel", inject(function (ipyKernel) {
-        ipyKernel.getOrStartKernel(kernel1Id);
+        ipyKernel.startKernel(kernel1Id);
+        $httpBackend.flush();
         $httpBackend.expectPOST('/api/kernels/restart/' + kernel1Guid).respond({});
         ipyKernel.restartKernel(kernel1Id);
         $httpBackend.flush();
@@ -114,8 +121,10 @@ describe("ipyKernel", function () {
   });
 
   describe("kernel messages", function(){
-    beforeEach(inject(function(){
+    beforeEach(inject(function(ipyKernel){
       $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel1Guid});
+      ipyKernel.startKernel(kernel1Id);
+      $httpBackend.flush();
     }));
 
     describe("execute", function () {
@@ -124,7 +133,6 @@ describe("ipyKernel", function () {
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
           var code = "this is some code";
           var promise = ipyKernel.execute(kernel1Id, code);
-          $httpBackend.flush();
           expect(ipyMessageHandler.kernelId).toEqual(kernel1Guid);
           var sentMessage = ipyMessageHandler.message;
           var content = ipyMessage.getContent(sentMessage);
@@ -140,26 +148,27 @@ describe("ipyKernel", function () {
             });
 
           var parentHeader = ipyMessage.getHeader(sentMessage);
-          var data = {'text/plain': 'somemessage'};
-          var firstMessage = ipyMessage.makeIopubStream(data, parentHeader);
+          var text = 'somemessage';
+          var firstMessage = ipyMessage.makeIopubStream(text, parentHeader);
           ipyMessageHandler.notify(firstMessage);
           $rootScope.$apply();
 
-          expect(iopubMessages[0].text).toEqual(data['text/plain']);
+          expect(iopubMessages[0]).toEqual(text);
 
-          var data2 = {'text/plain': 'somemessage2'};
-          var secondMessage = ipyMessage.makeIopubStream(data2, parentHeader);
+          var text2 = 'somemessage2';
+          var secondMessage = ipyMessage.makeIopubStream(text2, parentHeader);
           ipyMessageHandler.notify(secondMessage);
           $rootScope.$apply();
-          expect(iopubMessages[1].text).toEqual(data2['text/plain']);
+          expect(iopubMessages[1]).toEqual(text2);
 
           var out = {'text/plain': 'the output'};
-          var outMessage = ipyMessage.makeIopubOut(out, parentHeader);
+          var outMessage = ipyMessage.makeExecuteResult(out, 1, {}, parentHeader);
           ipyMessageHandler.notify(outMessage);
 
           var display = {'image/png': 'arbitrarypng'};
           var displayMessage = ipyMessage.makeIopubDisplay(display, parentHeader);
           ipyMessageHandler.notify(displayMessage);
+          $rootScope.$apply();
 
           var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
           ipyMessageHandler.resolve(response);
@@ -169,12 +178,11 @@ describe("ipyKernel", function () {
         })
       );
 
-      it("should include watched expressions for for specified kernel in it's execute request when watches are enabled",
+      it("should include watched expressions for specified kernel in it's execute request when watches are enabled",
         inject(function (ipyKernel, ipyMessage, ipyWatch, ipyMessageHandler) {
           var testExpression = 'this is a test expression';
           ipyWatch.createWatch(kernel1Id, testExpression);
           ipyKernel.execute(kernel1Id, 'some code');
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           var user_expressions = {};
           user_expressions[testExpression] = testExpression;
@@ -193,9 +201,10 @@ describe("ipyKernel", function () {
           content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.user_expressions).toEqual({});
 
+          ipyKernel.startKernel(kernel2Id);
           $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel2Guid});
-          ipyKernel.execute(kernel2Id, 'different kernel code');
           $httpBackend.flush();
+          ipyKernel.execute(kernel2Id, 'different kernel code');
           content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.user_expressions).toEqual({});
         })
@@ -204,7 +213,6 @@ describe("ipyKernel", function () {
       it("should pass appropriate options to the execute request",
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
           ipyKernel.execute(kernel1Id, 'some code', null, true, true, true);
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.silent).toBeTruthy();
           expect(content.store_history).toBeTruthy();
@@ -236,7 +244,6 @@ describe("ipyKernel", function () {
           ipyKernel.evaluate(kernel1Id, expression).then(function (result) {
             evaluateResult = result;
           });
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.user_expressions[0]).toEqual(expression);
 
@@ -262,7 +269,6 @@ describe("ipyKernel", function () {
           ipyKernel.inspect(kernel1Id, code, cursorPosition, detailLevel).then(function (result) {
             inspectResult = result;
           });
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.code).toEqual(code);
           expect(content.cursor_pos).toEqual(cursorPosition);
@@ -285,7 +291,6 @@ describe("ipyKernel", function () {
           ipyKernel.inspect(kernel1Id, code, cursorPosition).then(function (result) {
             completeResult = result;
           });
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.code).toEqual(code);
           expect(content.cursor_pos).toEqual(cursorPosition);
@@ -307,8 +312,8 @@ describe("ipyKernel", function () {
           ipyKernel.historySearch(kernel1Id, 'the pattern', numResults).then(function (result) {
             historyResult = result;
           });
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var header = ipyMessage.getHeader(ipyMessageHandler.message);
           expect(content.pattern).toEqual(pattern);
           expect(content.n).toEqual(numResults);
           var session = ipyMessage.session;
@@ -317,7 +322,7 @@ describe("ipyKernel", function () {
             [session, 2, ['second input', 'second output']],
             [session, 3, ['third input', 'third output']]
           ];
-          var response = ipyMessage.makeHistoryReply(history);
+          var response = ipyMessage.makeHistoryReply(history, header);
           ipyMessageHandler.resolve(response);
           $rootScope.$apply();
           expect(historyResult[0].input).toEqual(history[0][2][0]);
@@ -340,7 +345,6 @@ describe("ipyKernel", function () {
           ipyKernel.historyRange(kernel1Id, start, stop, getOutput).then(function (result) {
             historyResult = result;
           });
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.start).toEqual(start);
           expect(content.stop).toEqual(stop);
@@ -371,7 +375,6 @@ describe("ipyKernel", function () {
           ipyKernel.historyTail(kernel1Id, lastN, getOutput).then(function (result) {
             historyResult = result;
           });
-          $httpBackend.flush();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.n).toEqual(lastN);
           var session = ipyMessage.session;
