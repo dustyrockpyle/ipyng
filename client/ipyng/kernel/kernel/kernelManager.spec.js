@@ -1,5 +1,5 @@
 describe("ipyKernel", function () {
-  beforeEach(module('ipyng.messageHandler'));
+  beforeEach(module('ipyng.kernel.messageHandler'));
   beforeEach(module('ipyng.kernel.kernelManager'));
 
   var $httpBackend, $q, $rootScope, ipyMessage;

@@ -9,7 +9,6 @@ var prettify = require('gulp-prettify');
 var jshint = require('gulp-jshint');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
-var nunjucks = require('nunjucks');
 var nunjucksRender = require('gulp-nunjucks-render');
 var print = require('gulp-print');
 var lazypipe = require('lazypipe');
@@ -58,12 +57,12 @@ var schema = createSchema(root);
 
 
 var makeConfig = function(){
-  var configFile = fs.readFileSync(whichConfig, 'utf-8');
+  var configFile = fs.readFileSync(whichConfig, encoding = 'utf-8');
   config = yaml.load(configFile, { schema: schema});
   client = config.paths.client;
   vendor = config.paths.vendor;
   build = config.paths.build;
-  var env = nunjucks.configure(client);
+  var env = nunjucksRender.nunjucks.configure(client);
   env.addFilter('glop', glop, true);
   karmaConfig = config.karma || {};
 };
@@ -132,99 +131,99 @@ gulp.task('watch', function () {
         }
       ]
     }
-  });
+});
 
-  var watches = [];
-  var addWatch = function (arg1, arg2, arg3) {
-    watches.push(gulp.src(arg1).pipe(watch(arg1, arg2, arg2)));
-    return watches[watches.length - 1];
-  };
-  var addBatchWatch = function(arg1, arg2, arg3) {
-    watches.push(gulp.src(arg1).pipe(watch(arg1, batch(arg2))));
-    return watches[watches.length -1];
-  };
-  karmaServers = [];
+var watches = [];
+var addWatch = function (arg1, arg2, arg3) {
+  watches.push(gulp.src(arg1).pipe(watch(arg1, arg2, arg2)));
+  return watches[watches.length - 1];
+};
+var addBatchWatch = function(arg1, arg2, arg3) {
+  watches.push(gulp.src(arg1).pipe(watch(arg1, batch(arg2))));
+  return watches[watches.length -1];
+};
+karmaServers = [];
 
-  gulp.src(whichConfig)
-    .pipe(watch(whichConfig, function (file) {
-      if(file.isNull()) return;
-      watches.forEach(function (watch) {
-        watch.close();
-      });
-      _.forEach(karmaServers, function(server){
-        server.kill('SIGTERM');
-      });
+gulp.src(whichConfig)
+  .pipe(watch(whichConfig, function (file) {
+    if(file.isNull()) return;
+    watches.forEach(function (watch) {
+      watch.close();
+    });
+    _.forEach(karmaServers, function(server){
+      server.kill('SIGTERM');
+    });
 
-      watches = [];
-      try {
-        console.log('Making config, reloading watches.');
-        makeConfig();
-      } catch (err) {
-        console.log("Error while generating gulp configuration.");
-        console.log(err);
-        this.emit('end');
+    watches = [];
+    try {
+      console.log('Making config, reloading watches.');
+      makeConfig();
+    } catch (err) {
+      console.log("Error while generating gulp configuration.");
+      console.log(err);
+      this.emit('end');
+    }
+
+    addWatch(config.lint)
+      .pipe(errorPlumber())
+      .pipe(lint());
+
+    _.forEach(config.apps, function (appConfig) {
+
+      if (appConfig.html !== undefined) {
+        addBatchWatch(appConfig.html.watch, function (files) {
+          return gulp.src(appConfig.html.template)
+            .pipe(errorPlumber())
+            .pipe(build_html(appConfig.html)())
+            .pipe(reload());
+        });
+
+        addWatch(appConfig.html.scripts)
+          .pipe(errorPlumber())
+          .pipe(gulp.dest(build))
+          .pipe(reload());
       }
 
-      addWatch(config.lint)
-        .pipe(errorPlumber())
-        .pipe(lint());
-
-      _.forEach(config.apps, function (appConfig) {
-
-        if (appConfig.html !== undefined) {
-          addBatchWatch(appConfig.html.watch, function (files) {
-            return gulp.src(appConfig.html.template)
-              .pipe(errorPlumber())
-              .pipe(build_html(appConfig.html)())
-              .pipe(reload());
-          });
-
-          addWatch(appConfig.html.scripts)
+      if (appConfig.less !== undefined) {
+        addBatchWatch(appConfig.less.watch, function (files) {
+          return gulp.src(appConfig.less.template)
             .pipe(errorPlumber())
-            .pipe(gulp.dest(build))
+            .pipe(build_less(appConfig.less)())
             .pipe(reload());
-        }
+        });
+      }
 
-        if (appConfig.less !== undefined) {
-          addBatchWatch(appConfig.less.watch, function (files) {
-            return gulp.src(appConfig.less.template)
+      if (appConfig.tpl !== undefined) {
+        addBatchWatch(appConfig.tpl.src, function (files) {
+          return gulp.src(appConfig.tpl.src)
+            .pipe(errorPlumber())
+            .pipe(rename(function(path){
+              path.dirname = "";
+            }))
+            .pipe(templateCache({standalone: true}))
+            .pipe(copy_to_out(appConfig.tpl.dest)())
+            .pipe(reload());
+        });
+      }
+
+      if (appConfig.copy !== undefined){
+        _([appConfig.copy.src, appConfig.copy.dest])
+          .zip()
+          .map(function(obj){
+            addWatch(obj[0])
               .pipe(errorPlumber())
-              .pipe(build_less(appConfig.less)())
+              .pipe(gulp.dest(obj[1]))
               .pipe(reload());
           });
-        }
+      }
 
-        if (appConfig.tpl !== undefined) {
-          addBatchWatch(appConfig.tpl.src, function (files) {
-            return gulp.src(appConfig.tpl.src)
-              .pipe(errorPlumber())
-              .pipe(rename(function(path){
-                path.dirname = "";
-              }))
-              .pipe(templateCache({standalone: true}))
-              .pipe(copy_to_out(appConfig.tpl.dest)())
-              .pipe(reload());
-          });
-        }
-
-        if (appConfig.copy !== undefined){
-          _([appConfig.copy.src, appConfig.copy.dest])
-            .zip()
-            .map(function(obj){
-              addWatch(obj[0])
-                .pipe(errorPlumber())
-                .pipe(gulp.dest(obj[1]))
-                .pipe(reload());
-            });
-        }
-
-        if (appConfig.karma !== undefined){
-          _.extend(appConfig.karma, karmaConfig);
-          karmaServers.push(spawn('node',
-            [path.join(__dirname, 'karmaBackground.js'), JSON.stringify(appConfig.karma)],
-            {stdio: 'inherit'}
-          ));
-        }
-      });
-    }));
+      if (appConfig.karma !== undefined){
+        _.extend(appConfig.karma, karmaConfig);
+        karmaServers.push(spawn('node',
+          [path.join(__dirname, 'karmaBackground.js'), JSON.stringify(appConfig.karma)],
+          {stdio: 'inherit'}
+        ));
+      }
+    });
+  }));
 });
