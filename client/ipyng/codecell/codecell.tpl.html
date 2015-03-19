@@ -5,7 +5,7 @@
             <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="input"></ui-codemirror>
         </div>
     </div>
-    <div class="output" ng-show="stream.length || result">
+    <div class="output" ng-show="stream.length || output">
         <div class="prompt prompt-overlay"></div>
         <div class="display-area">
             <div class="stream" ng-show="stream">
@@ -14,9 +14,9 @@
                     <pre class="result">{{ stream }}</pre>
                 </div>
             </div>
-            <div class="pyout display-line" ng-show="result.text">
+            <div class="pyout display-line" ng-show="output">
                 <div class="prompt">Out[{{ executionCount||' ' }}]:</div>
-                <pre class="result">{{ result.text }}</pre>
+                <pre class="result">{{ output }}</pre>
             </div>
         </div>
     </div>

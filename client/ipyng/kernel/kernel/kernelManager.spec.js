@@ -249,11 +249,11 @@ describe("ipyKernel", function () {
 
           var expressionResult = "this is the result of the expression";
           var user_expressions = {};
-          user_expressions[0] = expressionResult;
+          user_expressions[0] = {data: {'text/plain': expressionResult}};
           var message = ipyMessage.makeExecuteReply('ok', 1, user_expressions);
           ipyMessageHandler.resolve(message);
           $rootScope.$apply();
-          expect(evaluateResult).toEqual(expressionResult);
+          expect(evaluateResult.text).toEqual(expressionResult);
         })
       );
     });

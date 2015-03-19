@@ -1,23 +1,24 @@
 angular.module('ipyng.codecell', ['ipyng.kernel', 'templates', 'ui.codemirror'])
-  .directive('ipyCodecell', ['ipyKernel', function (ipyKernel) {
+  .directive('ipyCodecell', function (ipyKernel) {
     return {
       templateUrl: 'codecell.tpl.html',
       restrict: 'E',
       scope: {
-        kernelId: '@'
+        kernelId: '@',
+        execute: '=?',
+        input: '=?',
+        output: '=?'
       },
       controller: function ($scope) {
-        $scope.result = null;
         $scope.stream = '';
-        $scope.input = "";
         $scope.execute = function () {
-          $scope.result = null;
           $scope.stream = '';
+          $scope.output = '';
           $scope.executionCount = '*';
           ipyKernel.execute($scope.kernelId, $scope.input)
             .then(function (result) {
               console.log("execute finished");
-              $scope.result = result;
+              $scope.output = result.text;
               $scope.executionCount = result.execution_count;
               console.log(result);
             }, null,
@@ -27,5 +28,5 @@ angular.module('ipyng.codecell', ['ipyng.kernel', 'templates', 'ui.codemirror'])
         };
       }
     };
-  }])
+  })
 ;

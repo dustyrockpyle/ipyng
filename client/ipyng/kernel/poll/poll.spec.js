@@ -12,7 +12,7 @@ describe('ipyPoll', function () {
     };
     mock.resolve = function (value) {
       mock.deferred.forEach(function (deferred) {
-        deferred.resolve(value);
+        deferred.resolve({data: {'text/plain': value}, text: value});
       });
     };
     return mock;
@@ -125,13 +125,13 @@ describe('ipyPoll', function () {
           $interval.flush(delay1 / 2);
           ipyKernel.resolve(value1);
           $rootScope.$apply();
-          expect(k1expression1watch1.getValue()).toEqual(value1);
-          expect(k1expression2watch1.getValue()).toEqual(value1);
+          expect(k1expression1watch1.getValue().text).toEqual(value1);
+          expect(k1expression2watch1.getValue().text).toEqual(value1);
           expect(k2expression2watch1.getValue()).toBeUndefined();
           $interval.flush(delay2 - delay1);
           ipyKernel.resolve(value2);
           $rootScope.$apply();
-          expect(k2expression2watch1.getValue()).toEqual(value2);
+          expect(k2expression2watch1.getValue().text).toEqual(value2);
         }
       ));
     });

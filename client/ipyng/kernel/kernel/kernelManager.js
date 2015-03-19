@@ -106,7 +106,9 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
         .then(function (response) {
           var content = ipyMessage.getContent(response);
           _.forEach(ipyWatch.getWatchedExpressions(kernelId), function (expression) {
-            ipyWatch.setValue(kernelId, expression, content.user_expressions[expression]);
+            var expressionResult = content.user_expressions[expression];
+            expressionResult.text = expressionResult.data['text/plain']
+            ipyWatch.setValue(kernelId, expression, expressionResult);
           });
           result.text = result['text/plain'];
           deferred.resolve(result);
@@ -139,9 +141,12 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
       var message = ipyMessage.makeExecuteMessage('', true, false, expressionContent, false);
       return ipyMessageHandler.sendShellRequest(kernels[kernelId].guid, message)
         .then(function(response){
-          var result = _.values(ipyMessage.getContent(response).user_expressions);
-          if(isArray) return result;
-          return result[0];
+          var results = _.values(ipyMessage.getContent(response).user_expressions);
+          _.forEach(results, function(result){
+            result.text = result.data['text/plain'];
+          });
+          if(isArray) return results;
+          return results[0];
         });
     };
 

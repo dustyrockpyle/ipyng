@@ -24,6 +24,11 @@ angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernelManager', 'ipyng.utils'
       obj.getValue = function () {
         return ipyPoll.getValue(kernelID, expression);
       };
+      obj.refresh = function(value) {
+        return ipyPoll.refresh(kernelID, expression, value);
+      };
+
+      obj.expression = expression;
       obj.uid = uid;
       return obj;
     };
@@ -36,10 +41,7 @@ angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernelManager', 'ipyng.utils'
         $interval.cancel(thisPoll.interval);
       }
       thisPoll.interval = $interval(function () {
-        ipyKernel.evaluate(kernelID, expression)
-          .then(function (result) {
-            ipyPoll.setValue(kernelID, expression, result);
-          });
+        ipyPoll.refresh(kernelID, expression);
       }, minDelay);
     };
 
@@ -50,6 +52,13 @@ angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernelManager', 'ipyng.utils'
         $interval.cancel(thisPoll.interval);
         delete ipyPoll.expressions[kernelID][expression];
       }
+    };
+
+    ipyPoll.refresh = function(kernelId, expression) {
+      ipyKernel.evaluate(kernelId, expression)
+        .then(function(result){
+          ipyPoll.setValue(kernelId, expression, result);
+        });
     };
 
     ipyPoll.setValue = function (kernelID, expression, value) {

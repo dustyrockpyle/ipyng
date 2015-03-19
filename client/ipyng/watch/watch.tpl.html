@@ -1,0 +1,20 @@
+<div class="watch">
+    <table class="table">
+        <thead><tr>
+            <th>Expression</th>
+            <th>Value</th>
+        </tr></thead>
+        <tbody>
+            <tr ng-repeat="expression in expressions track by $index">
+                <td><input ng-model="expressions[$index]" ng-model-options="{ updateOn: 'blur'}"
+                     ng-click="selectText($event)"></td>
+                <td>{{ watches[$index].getValue().text }}</td>
+            </tr>
+            <tr>
+                <td><input ng-model="newExpression" ng-model-options="{ updateOn: 'blur'}"
+                     ng-click="selectText($event)"></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

@@ -1,4 +1,4 @@
-angular.module('ipyng.kernel.watch', ['ng.lodash']).
+angular.module('ipyng.kernel.watch', ['ng.lodash', 'ipyng.kernel.kernelManager']).
   factory('ipyWatch', function (_) {
     var ipyWatch = {};
     ipyWatch.expressions = {};
@@ -20,6 +20,14 @@ angular.module('ipyng.kernel.watch', ['ng.lodash']).
       obj.getValue = function () {
         return ipyWatch.getValue(kernelID, expression);
       };
+      obj.setValue = function(value) {
+        return ipyWatch.setValue(kernelID, expression, value);
+      };
+      obj.refresh = function(){
+        return ipyWatch.refresh(kernelID, expression);
+      };
+
+      obj.expression = expression;
       obj.uid = uid;
       return obj;
     };
@@ -38,6 +46,13 @@ angular.module('ipyng.kernel.watch', ['ng.lodash']).
 
     ipyWatch.getValue = function (kernelID, expression) {
       return ipyWatch.expressions[kernelID][expression].value;
+    };
+
+    ipyWatch.refresh = function (kernelId, expression) {
+      return ipyKernel.evaluate(kernelId, expression)
+        .then(function(result){
+          ipyWatch.setValue(kernelId, expression, result);
+        });
     };
 
     ipyWatch.getWatchedExpressions = function (kernelID) {
