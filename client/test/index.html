@@ -5,8 +5,13 @@
 {% block body %}
 {% raw %}
     <div ng-controller="TestCtrl">
+        <span>ipy-codecell: </span>
         <ipy-codecell kernel-id="test"></ipy-codecell>
+        <br>
+        <span>psutil: </span>
         <psutil kernel-id="test"></psutil>
+        <br>
+        <span>watch: </span>
         <watch kernel-id="test"></watch>
     </div>
 {% endraw %}

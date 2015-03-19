@@ -1,5 +1,5 @@
 <div class="watch">
-    <table class="table">
+    <table class="table table-striped">
         <thead><tr>
             <th>Expression</th>
             <th>Value</th>
@@ -8,7 +8,7 @@
             <tr ng-repeat="expression in expressions track by $index">
                 <td><input ng-model="expressions[$index]" ng-model-options="{ updateOn: 'blur'}"
                      ng-click="selectText($event)"></td>
-                <td>{{ watches[$index].getValue().text }}</td>
+                <td><div class="value">{{ watches[$index].getValue().text }}</div></td>
             </tr>
             <tr>
                 <td><input ng-model="newExpression" ng-model-options="{ updateOn: 'blur'}"

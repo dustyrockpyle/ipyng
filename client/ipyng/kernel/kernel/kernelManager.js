@@ -107,7 +107,7 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
           var content = ipyMessage.getContent(response);
           _.forEach(ipyWatch.getWatchedExpressions(kernelId), function (expression) {
             var expressionResult = content.user_expressions[expression];
-            expressionResult.text = expressionResult.data['text/plain']
+            expressionResult.text = expressionResult.data['text/plain'];
             ipyWatch.setValue(kernelId, expression, expressionResult);
           });
           result.text = result['text/plain'];
@@ -222,7 +222,7 @@ angular.module('ipyng.kernel.kernelManager', ['ipyng.kernel.messageHandler', 'ip
       return function() {
         var args = _.concat(this.id, arguments);
         return func.apply(this, args);
-      }
+      };
     };
 
     Kernel.prototype = {
