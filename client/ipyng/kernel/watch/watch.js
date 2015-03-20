@@ -1,8 +1,12 @@
 angular.module('ipyng.kernel.watch', ['ng.lodash', 'ipyng.kernel.kernelManager']).
-  factory('ipyWatch', function (_) {
+  factory('ipyWatch', function (_, $injector) {
     var ipyWatch = {};
     ipyWatch.expressions = {};
-    ipyWatch.createWatch = function (kernelID, expression) {
+    ipyWatch.createWatch = function (kernel, expression) {
+      var kernelID;
+      if(_.isObject(kernel)) kernelID = kernel.kernelId;
+      else kernelID = kernel;
+
       var uid = _.uniqueId();
       if (_.isUndefined(ipyWatch.expressions[kernelID])) {
         ipyWatch.expressions[kernelID] = {};
@@ -49,6 +53,7 @@ angular.module('ipyng.kernel.watch', ['ng.lodash', 'ipyng.kernel.kernelManager']
     };
 
     ipyWatch.refresh = function (kernelId, expression) {
+      var ipyKernel = $injector.get('ipyKernel');
       return ipyKernel.evaluate(kernelId, expression)
         .then(function(result){
           ipyWatch.setValue(kernelId, expression, result);

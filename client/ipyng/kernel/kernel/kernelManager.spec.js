@@ -133,6 +133,7 @@ describe("ipyKernel", function () {
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
           var code = "this is some code";
           var promise = ipyKernel.execute(kernel1Id, code);
+          $rootScope.$apply();
           expect(ipyMessageHandler.kernelId).toEqual(kernel1Guid);
           var sentMessage = ipyMessageHandler.message;
           var content = ipyMessage.getContent(sentMessage);
@@ -146,7 +147,7 @@ describe("ipyKernel", function () {
             function (iopubMessage) {
               iopubMessages.push(iopubMessage);
             });
-
+          $rootScope.$apply();
           var parentHeader = ipyMessage.getHeader(sentMessage);
           var text = 'somemessage';
           var firstMessage = ipyMessage.makeIopubStream(text, parentHeader);
@@ -183,6 +184,7 @@ describe("ipyKernel", function () {
           var testExpression = 'this is a test expression';
           ipyWatch.createWatch(kernel1Id, testExpression);
           ipyKernel.execute(kernel1Id, 'some code');
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           var user_expressions = {};
           user_expressions[testExpression] = testExpression;
@@ -205,6 +207,7 @@ describe("ipyKernel", function () {
           $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel2Guid});
           $httpBackend.flush();
           ipyKernel.execute(kernel2Id, 'different kernel code');
+          $rootScope.$apply();
           content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.user_expressions).toEqual({});
         })
@@ -213,6 +216,7 @@ describe("ipyKernel", function () {
       it("should pass appropriate options to the execute request",
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
           ipyKernel.execute(kernel1Id, 'some code', null, true, true, true);
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.silent).toBeTruthy();
           expect(content.store_history).toBeTruthy();
@@ -244,6 +248,7 @@ describe("ipyKernel", function () {
           ipyKernel.evaluate(kernel1Id, expression).then(function (result) {
             evaluateResult = result;
           });
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.user_expressions[0]).toEqual(expression);
 
@@ -269,6 +274,7 @@ describe("ipyKernel", function () {
           ipyKernel.inspect(kernel1Id, code, cursorPosition, detailLevel).then(function (result) {
             inspectResult = result;
           });
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.code).toEqual(code);
           expect(content.cursor_pos).toEqual(cursorPosition);
@@ -291,6 +297,7 @@ describe("ipyKernel", function () {
           ipyKernel.inspect(kernel1Id, code, cursorPosition).then(function (result) {
             completeResult = result;
           });
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.code).toEqual(code);
           expect(content.cursor_pos).toEqual(cursorPosition);
@@ -312,6 +319,7 @@ describe("ipyKernel", function () {
           ipyKernel.historySearch(kernel1Id, 'the pattern', numResults).then(function (result) {
             historyResult = result;
           });
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           var header = ipyMessage.getHeader(ipyMessageHandler.message);
           expect(content.pattern).toEqual(pattern);
@@ -345,6 +353,7 @@ describe("ipyKernel", function () {
           ipyKernel.historyRange(kernel1Id, start, stop, getOutput).then(function (result) {
             historyResult = result;
           });
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.start).toEqual(start);
           expect(content.stop).toEqual(stop);
@@ -375,6 +384,7 @@ describe("ipyKernel", function () {
           ipyKernel.historyTail(kernel1Id, lastN, getOutput).then(function (result) {
             historyResult = result;
           });
+          $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.n).toEqual(lastN);
           var session = ipyMessage.session;

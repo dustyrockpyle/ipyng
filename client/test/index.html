@@ -4,15 +4,15 @@
 
 {% block body %}
 {% raw %}
-    <div ng-controller="TestCtrl">
+    <div kernel="test" start="python">
         <span>ipy-codecell: </span>
-        <ipy-codecell kernel-id="test"></ipy-codecell>
+        <ipy-codecell></ipy-codecell>
         <br>
         <span>psutil: </span>
-        <psutil kernel-id="test"></psutil>
+        <psutil></psutil>
         <br>
         <span>watch: </span>
-        <watch kernel-id="test"></watch>
+        <watch></watch>
     </div>
 {% endraw %}
 {% endblock %}

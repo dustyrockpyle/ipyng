@@ -3,27 +3,25 @@ angular.module('ipyng.codecell', ['ipyng.kernel', 'templates', 'ui.codemirror'])
     return {
       templateUrl: 'codecell.tpl.html',
       restrict: 'E',
+      require: '^kernel',
       scope: {
-        kernelId: '@',
         execute: '=?',
         input: '=?',
         output: '=?'
       },
-      controller: function ($scope) {
-        $scope.stream = '';
-        $scope.execute = function () {
-          $scope.stream = '';
-          $scope.output = '';
-          $scope.executionCount = '*';
-          ipyKernel.execute($scope.kernelId, $scope.input)
+      link: function (scope, element, attrs, kernel) {
+        scope.stream = '';
+        scope.execute = function () {
+          scope.stream = '';
+          scope.output = '';
+          scope.executionCount = '*';
+          kernel.execute(scope.input)
             .then(function (result) {
-              console.log("execute finished");
-              $scope.output = result.text;
-              $scope.executionCount = result.execution_count;
-              console.log(result);
+              scope.output = result.text;
+              scope.executionCount = result.execution_count;
             }, null,
             function (result){
-              $scope.stream += result;
+              scope.stream += result;
             });
         };
       }

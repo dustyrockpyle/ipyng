@@ -1,53 +1,52 @@
 angular.module('ipyng.watch', ['ipyng.kernel', 'ng.lodash', 'templates'])
-  .directive('watch', function() {
+  .directive('watch', function(ipyWatch, _) {
     return {
       templateUrl: 'watch.tpl.html',
       restrict: 'E',
+      require: '^kernel',
       scope: {
-        kernelId: '@',
         expressions: '=?'
       },
-      controller: function ($scope, ipyKernel, ipyWatch, _) {
+      link: function (scope, element, attrs, kernel) {
         var watch;
-        var unwatch;
-        $scope.expressions = $scope.expressions || [];
+        scope.expressions = scope.expressions || [];
+        scope.watches = [];
 
-        $scope.watches = [];
-        $scope.$watchCollection('expressions', function(expressions){
+        scope.$watchCollection('expressions', function(expressions){
           // Delete any empty expressions
           expressions = _.filter(expressions, function(expression){
             return expression;
           });
-          if(expressions.length != $scope.expressions.length){
-            $scope.expressions = expressions;
+          if(expressions.length != scope.expressions.length){
+            scope.expressions = expressions;
             return;
           }
 
           // For now just destroy and recreate all watches for simplicity.
-          _.forEach($scope.watches, function(watch){
+          _.forEach(scope.watches, function(watch){
             watch.cancel();
           });
-          $scope.watches = [];
+          scope.watches = [];
           _.forEach(expressions, function(expression) {
-            $scope.watches.push(ipyWatch.createWatch($scope.kernelId, expression));
-            _.last($scope.watches).refresh();
+            scope.watches.push(ipyWatch.createWatch(kernel, expression));
+            _.last(scope.watches).refresh();
           });
         });
 
         var newDefault = 'New watch...';
-        $scope.newExpression = newDefault;
-        $scope.$watch('newExpression', function(expression){
+        scope.newExpression = newDefault;
+        scope.$watch('newExpression', function(expression){
           if(expression == newDefault) return;
-          $scope.expressions.push(expression);
-          $scope.newExpression = newDefault;
+          scope.expressions.push(expression);
+          scope.newExpression = newDefault;
         });
 
-        $scope.selectText = function($event){
+        scope.selectText = function($event){
           $event.target.select();
         };
 
-        $scope.$on('$destroy', function(){
-          _.forEach($scope.watches, function(watch){
+        scope.$on('$destroy', function(){
+          _.forEach(scope.watches, function(watch){
             watch.cancel();
           });
         });

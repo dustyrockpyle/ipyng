@@ -4,7 +4,11 @@ angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernelManager', 'ipyng.utils'
     ipyPoll.expressions = {};
     ipyPoll.delays = Object.create(null);
     ipyPoll.intervals = {};
-    ipyPoll.createPoll = function (kernelID, expression, delay) {
+    ipyPoll.createPoll = function (kernel, expression, delay) {
+      var kernelID;
+      if(_.isObject(kernel)) kernelID = kernel.kernelId;
+      else kernelID = kernel;
+
       var uid = _.uniqueId();
       if (_.isUndefined(ipyPoll.expressions[kernelID])) {
         ipyPoll.expressions[kernelID] = {};
