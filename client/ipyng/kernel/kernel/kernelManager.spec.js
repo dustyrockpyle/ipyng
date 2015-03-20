@@ -179,43 +179,9 @@ describe("ipyKernel", function () {
         })
       );
 
-      it("should include watched expressions for specified kernel in it's execute request when watches are enabled",
-        inject(function (ipyKernel, ipyMessage, ipyWatch, ipyMessageHandler) {
-          var testExpression = 'this is a test expression';
-          ipyWatch.createWatch(kernel1Id, testExpression);
-          ipyKernel.execute(kernel1Id, 'some code');
-          $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
-          var user_expressions = {};
-          user_expressions[testExpression] = testExpression;
-          expect(content.user_expressions).toEqual(user_expressions);
-
-          var testExpression2 = 'this is test expression 2';
-          ipyWatch.createWatch(kernel1Id, testExpression2);
-          ipyKernel.execute(kernel1Id, 'some more code');
-          $rootScope.$apply();
-          user_expressions[testExpression2] = testExpression2;
-          content = ipyMessage.getContent(ipyMessageHandler.message);
-          expect(content.user_expressions).toEqual(user_expressions);
-
-          ipyKernel.execute(kernel1Id, 'even more code', false);
-          $rootScope.$apply();
-          content = ipyMessage.getContent(ipyMessageHandler.message);
-          expect(content.user_expressions).toEqual({});
-
-          ipyKernel.startKernel(kernel2Id);
-          $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel2Guid});
-          $httpBackend.flush();
-          ipyKernel.execute(kernel2Id, 'different kernel code');
-          $rootScope.$apply();
-          content = ipyMessage.getContent(ipyMessageHandler.message);
-          expect(content.user_expressions).toEqual({});
-        })
-      );
-
       it("should pass appropriate options to the execute request",
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
-          ipyKernel.execute(kernel1Id, 'some code', null, true, true, true);
+          ipyKernel.execute(kernel1Id, 'some code', true, true, true);
           $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.silent).toBeTruthy();

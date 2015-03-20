@@ -1,6 +1,24 @@
 describe('ipyWatch', function () {
   beforeEach(module('ipyng.kernel.watch'));
   beforeEach(module('ng.lodash'));
+
+  var kernelManagerMock = function($q) {
+    var mock = {};
+
+    mock.evaluate = function(kernelId, expressions) {
+      mock.kernelId = kernelId;
+      mock.expressions = expressions;
+      mock.deferred = $q.defer();
+      return mock.deferred.promise;
+    };
+
+    return mock;
+  };
+
+  beforeEach(module(function($provide) {
+    $provide.factory("ipyKernel", kernelManagerMock);
+  }));
+
   var expression1 = 'first expression';
   var expression2 = 'second expression';
   var kernel1ID = 'kernel1';
@@ -119,6 +137,30 @@ describe('ipyWatch', function () {
           expect(ipyWatch.expressions[kernel1ID][expression1]).toBeUndefined();
         })
       );
+    });
+
+    describe("refresh", function(){
+      it("should call ipyKernel.evaluate for all expressions", inject(
+        function(ipyWatch, ipyKernel) {
+          ipyWatch.refresh(kernel1ID);
+          expect(ipyKernel.kernelId).toEqual(kernel1ID);
+          expect(ipyKernel.expressions).toEqual([expression1, expression2]);
+        }));
+
+      it("should call ipyKernel.setValue with the result of all expressions", inject(
+        function(ipyWatch, ipyMessage, ipyKernel, $rootScope) {
+          ipyWatch.refresh(kernel1ID);
+          var result1 = 'result1';
+          var result2 = 'result2';
+          var result = {
+            0:  result1,
+            1:  result2
+          };
+          ipyKernel.deferred.resolve(result);
+          $rootScope.$apply();
+          expect(ipyWatch.getValue(kernel1ID, expression1)).toEqual(result1);
+          expect(ipyWatch.getValue(kernel1ID, expression2)).toEqual(result2);
+        }));
     });
   });
 });

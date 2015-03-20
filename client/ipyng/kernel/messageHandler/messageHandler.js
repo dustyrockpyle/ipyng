@@ -87,6 +87,10 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
       return message.header.msg_type;
     };
 
+    ipyMessage.getSession = function(message) {
+      return message.header.session;
+    };
+
     ipyMessage.getContent = function (message) {
       return message.content;
     };
@@ -236,7 +240,6 @@ angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.webs
       };
       return ipyMessage.makeMessage('stream', content);
     };
-
     ipyMessage.makeStatusReply = function(status, parentHeader) {
       var content = {execution_state: status};
       return ipyMessage.makeMessage('status', content, parentHeader, 'iopub');

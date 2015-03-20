@@ -1,4 +1,22 @@
-angular.module('ipyng.kernel.watch', ['ng.lodash', 'ipyng.kernel.kernelManager']).
+angular.module('ipyng.kernel.watch', ['ng.lodash', 'ipyng.kernel.messageHandler', 'ipyng.kernel.kernelManager']).
+  config(function($provide){
+    // I don't know how to test this but it seems to work well...
+    // TODO: Test this magic.
+    $provide.decorator('ipyMessageHandler', function($delegate, $injector){
+      var messageHandler = $delegate;
+      var handleIopubMessage = messageHandler.handleIopubMessage;
+      messageHandler.handleIopubMessage = function(message){
+        var ipyMessage = $injector.get('ipyMessage');
+        if(ipyMessage.getMessageType(message) == 'execute_input') {
+          var session = ipyMessage.getSession(message);
+          var kernel = $injector.get('ipyKernel').sessions[session];
+          $injector.get('ipyWatch').refresh(kernel.id);
+        }
+        handleIopubMessage(message);
+      };
+      return $delegate;
+    });
+  }).
   factory('ipyWatch', function (_, $injector) {
     var ipyWatch = {};
     ipyWatch.expressions = {};
@@ -52,11 +70,15 @@ angular.module('ipyng.kernel.watch', ['ng.lodash', 'ipyng.kernel.kernelManager']
       return ipyWatch.expressions[kernelID][expression].value;
     };
 
-    ipyWatch.refresh = function (kernelId, expression) {
+    ipyWatch.refresh = function (kernelId, expressions) {
       var ipyKernel = $injector.get('ipyKernel');
-      return ipyKernel.evaluate(kernelId, expression)
-        .then(function(result){
-          ipyWatch.setValue(kernelId, expression, result);
+      if(!expressions) expressions = _.keys(ipyWatch.expressions[kernelId]);
+      else if(!_.isArray(expressions)) expressions = [expressions];
+      return ipyKernel.evaluate(kernelId, expressions)
+        .then(function(results){
+          _.forEach(results, function(result, key){
+            ipyWatch.setValue(kernelId, expressions[key], result);
+          });
         });
     };
 
