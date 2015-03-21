@@ -29,8 +29,8 @@ angular.module('ipy.watch', ['ipyng', 'ng.lodash', 'templates'])
           scope.watches = [];
           _.forEach(expressions, function(expression) {
             scope.watches.push(ipyWatch.createWatch(kernel, expression));
-            _.last(scope.watches).refresh();
           });
+          ipyWatch.refresh(kernel.id, expressions);
         });
 
         var newDefault = 'New watch...';

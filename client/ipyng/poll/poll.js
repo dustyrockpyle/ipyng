@@ -6,7 +6,7 @@ angular.module('ipyng.poll', ['ipyng.kernel', 'ipyng.utils', 'ng.lodash']).
     ipyPoll.intervals = {};
     ipyPoll.createPoll = function (kernel, expression, delay) {
       var kernelID;
-      if(_.isObject(kernel)) kernelID = kernel.kernelId;
+      if(_.isObject(kernel)) kernelID = kernel.id;
       else kernelID = kernel;
 
       var uid = _.uniqueId();

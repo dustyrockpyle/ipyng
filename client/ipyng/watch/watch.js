@@ -17,12 +17,12 @@ angular.module('ipyng.watch', ['ng.lodash', 'ipyng.messageHandler', 'ipyng.kerne
       return $delegate;
     });
   }).
-  factory('ipyWatch', function (_, $injector) {
+  factory('ipyWatch', function (_, ipyKernel, $q) {
     var ipyWatch = {};
     ipyWatch.expressions = {};
     ipyWatch.createWatch = function (kernel, expression) {
       var kernelID;
-      if(_.isObject(kernel)) kernelID = kernel.kernelId;
+      if(_.isObject(kernel)) kernelID = kernel.id;
       else kernelID = kernel;
 
       var uid = _.uniqueId();
@@ -71,14 +71,15 @@ angular.module('ipyng.watch', ['ng.lodash', 'ipyng.messageHandler', 'ipyng.kerne
     };
 
     ipyWatch.refresh = function (kernelId, expressions) {
-      var ipyKernel = $injector.get('ipyKernel');
       if(!expressions) expressions = _.keys(ipyWatch.expressions[kernelId]);
       else if(!_.isArray(expressions)) expressions = [expressions];
+      if(expressions.length == 0) return $q.when([]);
       return ipyKernel.evaluate(kernelId, expressions)
         .then(function(results){
           _.forEach(results, function(result, key){
             ipyWatch.setValue(kernelId, expressions[key], result);
           });
+          return results;
         });
     };
 

@@ -236,14 +236,20 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
     return {
       restrict: 'A',
       controller: function ($scope, $attrs, ipyKernel, _) {
-        if($attrs.kernel) this.kernelId = $attrs.kernel;
-        else this.kernelId = _.uniqueId();
+        if($attrs.kernel) this.id = $attrs.kernel;
+        else this.id = _.uniqueId();
+        var kernel;
         if($attrs.$attr.start) {
-          this.promise = ipyKernel.startKernel(this.kernelId, $attrs.start);
+          kernel = ipyKernel.startKernel(this.id, $attrs.start);
         }
         else {
-          this.promise = ipyKernel.getKernel(this.kernelId);
+          kernel = ipyKernel.getKernel(this.id)
         }
+        var _this = this;
+        this.promise = kernel.then(function(kernel){
+          _.assign(_this, kernel);
+          return _this;
+        });
 
         var makeKernelFunction = function(func, id) {
           return function() {
@@ -253,16 +259,16 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
           };
         };
 
-        this.interruptKernel = makeKernelFunction(ipyKernel.interruptKernel, this.kernelId);
-        this.restartKernel = makeKernelFunction(ipyKernel.restartKernel, this.kernelId);
-        this.execute = makeKernelFunction(ipyKernel.execute, this.kernelId);
-        this.executeSilent = makeKernelFunction(ipyKernel.executeSilent, this.kernelId);
-        this.evaluate = makeKernelFunction(ipyKernel.evaluate, this.kernelId);
-        this.inspect = makeKernelFunction(ipyKernel.inspect, this.kernelId);
-        this.complete = makeKernelFunction(ipyKernel.complete, this.kernelId);
-        this.historySearch = makeKernelFunction(ipyKernel.historySearch, this.kernelId);
-        this.historyRange = makeKernelFunction(ipyKernel.historyRange, this.kernelId);
-        this.historyTail = makeKernelFunction(ipyKernel.historyTail, this.kernelId);
+        this.interruptKernel = makeKernelFunction(ipyKernel.interruptKernel, this.id);
+        this.restartKernel = makeKernelFunction(ipyKernel.restartKernel, this.id);
+        this.execute = makeKernelFunction(ipyKernel.execute, this.id);
+        this.executeSilent = makeKernelFunction(ipyKernel.executeSilent, this.id);
+        this.evaluate = makeKernelFunction(ipyKernel.evaluate, this.id);
+        this.inspect = makeKernelFunction(ipyKernel.inspect, this.id);
+        this.complete = makeKernelFunction(ipyKernel.complete, this.id);
+        this.historySearch = makeKernelFunction(ipyKernel.historySearch, this.id);
+        this.historyRange = makeKernelFunction(ipyKernel.historyRange, this.id);
+        this.historyTail = makeKernelFunction(ipyKernel.historyTail, this.id);
       }
     };
   })
