@@ -73,7 +73,7 @@ angular.module('ipyng.watch', ['ng.lodash', 'ipyng.messageHandler', 'ipyng.kerne
     ipyWatch.refresh = function (kernelId, expressions) {
       if(!expressions) expressions = _.keys(ipyWatch.expressions[kernelId]);
       else if(!_.isArray(expressions)) expressions = [expressions];
-      if(expressions.length == 0) return $q.when([]);
+      if(expressions.length === 0) return $q.when([]);
       return ipyKernel.evaluate(kernelId, expressions)
         .then(function(results){
           _.forEach(results, function(result, key){

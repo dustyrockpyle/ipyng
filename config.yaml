@@ -41,6 +41,7 @@ html:
     src: !join [*client, test/index.html]
     dest: !join [*build, test/index.html]
     static_url: *static_url
+    main: test
     includes: !flatten
         - *vendor_scripts
         - *client_scripts

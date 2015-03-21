@@ -1,18 +1,5 @@
 {% extends "base.html" %}
 
-{% block appname %}test{%endblock%}
-
 {% block body %}
-{% raw %}
-    <div kernel="test" start="python">
-        <span>ipy-codecell: </span>
-        <codecell></codecell>
-        <br>
-        <span>psutil: </span>
-        <psutil></psutil>
-        <br>
-        <span>watch: </span>
-        <watch></watch>
-    </div>
-{% endraw %}
+<ui-view>Starting kernel...</ui-view>
 {% endblock %}

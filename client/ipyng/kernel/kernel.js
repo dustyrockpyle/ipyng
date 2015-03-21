@@ -243,7 +243,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
           kernel = ipyKernel.startKernel(this.id, $attrs.start);
         }
         else {
-          kernel = ipyKernel.getKernel(this.id)
+          kernel = ipyKernel.getKernel(this.id);
         }
         var _this = this;
         this.promise = kernel.then(function(kernel){

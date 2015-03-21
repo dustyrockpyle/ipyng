@@ -5,5 +5,5 @@ angular.module('test', [
   'ipy.codecell',
   'ipy.psutil',
   'ipy.watch',
-  'ui.router'
+  'test.routes'
 ]);
