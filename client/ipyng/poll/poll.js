@@ -1,4 +1,4 @@
-angular.module('ipyng.kernel.poll', ['ipyng.kernel.kernelManager', 'ipyng.utils', 'ng.lodash']).
+angular.module('ipyng.poll', ['ipyng.kernel', 'ipyng.utils', 'ng.lodash']).
   factory('ipyPoll', function (ipyKernel, $interval, _) {
     var ipyPoll = {};
     ipyPoll.expressions = {};

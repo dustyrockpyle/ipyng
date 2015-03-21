@@ -1,19 +1,75 @@
 debug: &debug Yes
-https: No
-static_url: &static_url "/"
-port: 9000
-port2: 8000
+static_url: &static_url "http://localhost:9000/"
 
 paths:
     root: &root '../' 
     client: &client !join [*root, client/]
     build: &build !join [*root, build/]
-    static: *build
     vendor: &vendor !join [*root, gulp/vendor/]
-    index: !join [*build, ipyng/index.html]
+
+server:
+    root: *root
+    livereload: true
+    port: 9000
+
+vendor_scripts: &vendor_scripts !prepend
+    - *vendor
+    - angular/angular.js
+    - angular-ui-router/release/angular-ui-router.js
+    - lodash/dist/lodash.js
+    - angular-bootstrap/ui-bootstrap-tpls.js
+    - codemirror/lib/codemirror.js
+    - codemirror/mode/python/python.js
+    - angular-ui-codemirror/ui-codemirror.js
+
+templates_dest: &templates_dest !join [*build, test/templates.js]
+
+client_scripts: &client_scripts
+    - !join [*client, "**/!(*.spec)*.js"]
+    - *templates_dest
+
+client_js: &client_js
+    - !join [*client, "**/*.js"]
+
+css_dest: &css_dest !join [*build, test/styles.css]
 
 lint:
-    - !join [*client, "**/*.js"]
+    src: *client_js
+    watch: *client_js
+
+html:
+    src: !join [*client, test/index.html]
+    dest: !join [*build, test/index.html]
+    static_url: *static_url
+    includes: !flatten
+        - *vendor_scripts
+        - *client_scripts
+        - !join [*vendor, codemirror/lib/codemirror.css]
+        - *css_dest
+    watch: !flatten
+        - *client_scripts
+        - !join [*client, test/index.html]
+
+less:
+    src: !join [*client, base.less]
+    dest: *css_dest
+    includes:
+        - !join [*vendor, bootstrap/less/bootstrap.less]
+        - !join [*client, "**/*.less"]
+        - !join ["!", *client, base.less]
+    vars:
+        static_url: *static_url
+        icon-font-path: !join [*static_url, gulp/vendor/bootstrap/fonts/]
+    paths:
+        - !join [*vendor, bootstrap/less]
+    watch: !join [*client, "**/*.less"]
+
+templates:
+    standalone: true
+    module: templates
+    src: !join [*client, "**/*.tpl.html"]
+    dest: *templates_dest
+    watch: !join [*client, "**/*.tpl.html"]
 
 karma:
     browsers:
@@ -23,81 +79,7 @@ karma:
     reporters:
         - dots
     reportSlowerThan: 100
-
-apps:
-    ipyng:
-        less:
-            watch:
-                - !join [*client, ipyng/**/*.less]
-                - !join [*client, base.less]
-            template: !join [*client, base.less]
-            vars:
-                static_url: *static_url
-                icon-font-path: !join [*static_url, fonts/]
-            globs:
-                - !join [*client, "ipyng/**/*.less"]
-            includes:
-                - bootstrap.less
-            paths:
-                - !join [*vendor, bootstrap/less]
-            dest: !join [*build, ipyng/styles.css]
-        karma:
-            files:
-                - !join [*build, angular/angular.js]
-                - !join [*build, "**/*.js"]
-                - !join [*vendor, angular-mocks/angular-mocks.js]
-                - !join [*client, "ipyng/**/*.spec.js"]
-        tpl:
-            src:
-                - !join [*client, ipyng/**/*.tpl.html]
-            dest: !join [*build, ipyng/ipyng.tpl.js]
-
-    test:
-        html:
-            scripts: &scripts2 !flatten
-                - !prepend
-                    - !join [*vendor, "@()"]
-                    - angular/angular.js
-                    - lodash/dist/lodash.js
-                    - angular-bootstrap/ui-bootstrap-tpls.js
-                    - codemirror/lib/codemirror.js
-                    - codemirror/mode/python/python.js
-                    - angular-ui-codemirror/ui-codemirror.js
-                - !join [*client, "@()ng-lodash/ng-lodash.js"]
-                - !join [*client, "@()ipyng/**/*.js"]
-                - !join [*client, "@()test/**/*.js"]
-                - !join ["!", *client, "**/*.spec.js"]
-            watch: !flatten
-                - !join [*client, test/**/*.js]
-                - !join [*client, base.html]
-                - !join [*client, test/index.html]
-                - *scripts2
-            template: !join [*client, test/index.html]
-            static_url: "http://localhost:9000/"
-            includes:
-                - ipyng/ipyng.tpl.js
-                - codemirror/lib/codemirror.css
-                - test/styles.css
-            dest: !join [*build, test/index.html]
-        less:
-            watch:
-                - !join [*client, ipyng/**/*.less]
-                - !join [*client, base.less]
-            template: !join [*client, base.less]
-            vars:
-                static_url: *static_url
-                icon-font-path: !join [*static_url, fonts/]
-            globs:
-                - !join [*client, "ipyng/**/*.less"]
-            includes:
-                - bootstrap.less
-            paths:
-                - !join [*vendor, bootstrap/less]
-            dest: !join [*build, test/styles.css]
-        copy:
-            src:
-                - !join [*vendor, bootstrap/fonts/*.*]
-                - !join [*vendor, "@()codemirror/lib/codemirror.css"]
-            dest:
-                - !join [*build, fonts/]
-                - *build
+    files: !flatten
+        - *vendor_scripts
+        - !join [*vendor, angular-mocks/angular-mocks.js]
+        - *client_js

@@ -1,23 +1,18 @@
 <!DOCTYPE html>
 <html ng-app="{% block appname %}{% endblock %}">
 <head>
-    {% block scripts %}
-        {% for file in scripts|glop %}
-            <script type="text/javascript" src="{{ static_url }}{{ file.relative }}"></script>
-        {% endfor %}
-    {% endblock %}
-
     {% block includes %}
-        {% for path in includes %}
-            {% if path.slice(-3) == ".js" %}
-                <script type="text/javascript" src="{{ static_url}}{{ path }}"></script>
-            {% elif path.slice(-4) == ".css" %}
-                <link href="{{ static_url }}{{ path }}" rel="stylesheet" media="all">
+        {% for file in includes|glop %}
+            {% if file.relative.slice(-3) == ".js" %}
+                <script type="text/javascript" src="{{ static_url}}{{ file.relative }}"></script>
+            {% elif file.relative.slice(-4) == ".css" %}
+                <link href="{{ static_url }}{{ file.relative }}" rel="stylesheet" media="all">
             {% endif %}
         {% endfor %}
     {% endblock %}
 
     {% block head %}{% endblock %}
+
 </head>
 
 <body>

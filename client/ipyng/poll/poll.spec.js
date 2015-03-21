@@ -1,5 +1,5 @@
 describe('ipyPoll', function () {
-  beforeEach(module('ipyng.kernel.poll'));
+  beforeEach(module('ipyng.poll'));
   beforeEach(module('ng.lodash'));
 
   var $q, $interval;

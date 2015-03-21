@@ -1,6 +1,7 @@
 angular.module('ipyng', [
-  'ipyng.codecell',
   'ipyng.kernel',
-  'ipyng.psutil',
+  'ipyng.messageHandler',
+  'ipyng.poll',
+  'ipyng.utils',
   'ipyng.watch'
 ]);

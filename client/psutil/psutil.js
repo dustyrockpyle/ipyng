@@ -1,4 +1,4 @@
-angular.module('ipyng.psutil', ['ipyng.kernel', 'ng.lodash', 'templates'])
+angular.module('ipy.psutil', ['ipyng', 'ng.lodash', 'templates'])
   .directive('psutil', function(ipyPoll) {
     return {
       templateUrl: 'psutil.tpl.html',

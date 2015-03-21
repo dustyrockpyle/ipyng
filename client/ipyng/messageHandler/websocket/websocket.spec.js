@@ -1,5 +1,5 @@
 describe("ipyWebsocketHandler", function() {
-  beforeEach(module('ipyng.kernel.messageHandler.websocket'));
+  beforeEach(module('ipyng.messageHandler.websocket'));
   beforeEach(module('ipyng.utils'));
 
 

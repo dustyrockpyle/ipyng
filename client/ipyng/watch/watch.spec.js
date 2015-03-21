@@ -1,5 +1,5 @@
 describe('ipyWatch', function () {
-  beforeEach(module('ipyng.kernel.watch'));
+  beforeEach(module('ipyng.watch'));
   beforeEach(module('ng.lodash'));
 
   var kernelManagerMock = function($q) {

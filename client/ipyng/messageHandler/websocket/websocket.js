@@ -1,9 +1,9 @@
-angular.module('ipyng.kernel.messageHandler.websocket', ['ng.lodash'])
+angular.module('ipyng.messageHandler.websocket', ['ng.lodash'])
   .factory('ipyWebsocketHandler', function (ipyWebsocket, _, $q) {
     var websocketHandler = {connections: {}};
     var onmessageID = 'onmessageCallbacks';
     var oncloseID = 'oncloseCallbacks';
-    var onopenID = 'onopenCallbcks';
+    var onopenID = 'onopenCallbacks';
     websocketHandler.create = function (url) {
       var ws = {};
       var websocket = new ipyWebsocket(url);

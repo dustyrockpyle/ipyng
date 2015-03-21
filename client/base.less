@@ -1,8 +1,4 @@
-{% for path in includes -%}
-@import "{{ path }}";
-{% endfor -%}
-
-{% for file in globs|glop -%}
+{% for file in includes|glop -%}
 @import "{{ file.path }}";
 {% endfor -%}
 

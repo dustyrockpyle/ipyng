@@ -1,5 +1,5 @@
-angular.module('ipyng.codecell', ['ipyng.kernel', 'templates', 'ui.codemirror'])
-  .directive('ipyCodecell', function (ipyKernel) {
+angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror'])
+  .directive('codecell', function (ipyKernel) {
     return {
       templateUrl: 'codecell.tpl.html',
       restrict: 'E',

@@ -1,6 +1,6 @@
 describe("ipyMessageHandler", function() {
-  beforeEach(module('ipyng.kernel.messageHandler.websocket'));
-  beforeEach(module('ipyng.kernel.messageHandler'));
+  beforeEach(module('ipyng.messageHandler.websocket'));
+  beforeEach(module('ipyng.messageHandler'));
 
   var websocketHandlerMock = function() {
     var mock = {};

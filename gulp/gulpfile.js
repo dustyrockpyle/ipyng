@@ -36,14 +36,14 @@ var glop = function (pattern, cb) {
   var result = [];
   gs.create(pattern)
     .on('data', function(file){
-      file.relative = fix_slashes(path.relative(file.base, file.path));
+      file.relative = fix_slashes(path.relative(config.server.root, file.path));
       result.push(file);
     }).on('end', function(){
       cb(null, result);
     });
 };
 
-var config, root, client, vendor, build, whichConfig, karmaConfig, karmaServers;
+var config, root, client, vendor, build, whichConfig, karmaServer;
 if(argv.config) {
   whichConfig = formatPath(argv.config);
 }
@@ -55,7 +55,6 @@ root = fix_slashes(path.dirname(whichConfig)) + '/';
 
 var schema = createSchema(root);
 
-
 var makeConfig = function(){
   var configFile = fs.readFileSync(whichConfig, encoding = 'utf-8');
   config = yaml.load(configFile, { schema: schema});
@@ -64,7 +63,6 @@ var makeConfig = function(){
   build = config.paths.build;
   var env = nunjucksRender.nunjucks.configure(client);
   env.addFilter('glop', glop, true);
-  karmaConfig = config.karma || {};
 };
 
 var nunjucksContext = {
@@ -102,6 +100,15 @@ var build_less = function (less_config) {
     .pipe(copy_to_out(less_config.dest));
 };
 
+var build_templates = function (tpl_config) {
+  return lazypipe()
+    .pipe(rename, function(path){
+      path.dirname = "";
+    })
+    .pipe(templateCache, tpl_config)
+    .pipe(copy_to_out(tpl_config.dest));
+};
+
 var reload = lazypipe()
   .pipe(print, function (filepath) {
     return "Reloading " + formatPath(filepath);
@@ -119,95 +126,86 @@ var errorPlumber = function(){
 
 gulp.task('watch', function () {
   makeConfig();
-  connect.server({
-    root: config.paths.build,
-    livereload: true,
-    port: config.port,
-    middleware: function(connect, opt){
-      return [
-        function(req, res, next){
-          res.setHeader("Access-Control-Allow-Origin", "*");
-          next();
-        }
-      ]
-    }
-});
 
-var watches = [];
-var addWatch = function (arg1, arg2, arg3) {
-  watches.push(gulp.src(arg1).pipe(watch(arg1, arg2, arg2)));
-  return watches[watches.length - 1];
-};
-var addBatchWatch = function(arg1, arg2, arg3) {
-  watches.push(gulp.src(arg1).pipe(watch(arg1, batch(arg2))));
-  return watches[watches.length -1];
-};
-karmaServers = [];
-
-gulp.src(whichConfig)
-  .pipe(watch(whichConfig, function (file) {
-    if(file.isNull()) return;
-    watches.forEach(function (watch) {
-      watch.close();
+  if(config.server !== undefined) {
+    connect.server({
+      root: config.server.root,
+      livereload: config.server.livereload,
+      port: config.server.port,
+      middleware: function(connect, opt){
+        return [
+          function(req, res, next){
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            next();
+          }
+        ]
+      }
     });
-    _.forEach(karmaServers, function(server){
-      server.kill('SIGTERM');
-    });
+  }
 
-    watches = [];
-    try {
-      console.log('Making config, reloading watches.');
-      makeConfig();
-    } catch (err) {
-      console.log("Error while generating gulp configuration.");
-      console.log(err);
-      this.emit('end');
-    }
+  var watches = [];
+  var addWatch = function (arg1, arg2, arg3) {
+    watches.push(gulp.src(arg1).pipe(watch(arg1, arg2, arg2)));
+    return watches[watches.length - 1];
+  };
+  var addBatchWatch = function(arg1, arg2, arg3) {
+    watches.push(gulp.src(arg1).pipe(watch(arg1, batch(arg2))));
+    return watches[watches.length -1];
+  };
 
-    addWatch(config.lint)
-      .pipe(errorPlumber())
-      .pipe(lint());
+  gulp.src(whichConfig)
+    .pipe(watch(whichConfig, function (file) {
+      if(file.isNull()) return;
+      watches.forEach(function (watch) {
+        watch.close();
+      });
+      if(karmaServer !== undefined) karmaServer.kill('SIGTERM');
 
-    _.forEach(config.apps, function (appConfig) {
+      watches = [];
+      try {
+        console.log('Making config, reloading watches.');
+        makeConfig();
+      } catch (err) {
+        console.log("Error while generating gulp configuration.");
+        console.log(err);
+        this.emit('end');
+      }
 
-      if (appConfig.html !== undefined) {
-        addBatchWatch(appConfig.html.watch, function (files) {
-          return gulp.src(appConfig.html.template)
-            .pipe(errorPlumber())
-            .pipe(build_html(appConfig.html)())
-            .pipe(reload());
-        });
-
-        addWatch(appConfig.html.scripts)
+      if (config.lint !== undefined && config.lint.watch !== undefined) {
+        addWatch(config.lint.watch)
           .pipe(errorPlumber())
-          .pipe(gulp.dest(build))
-          .pipe(reload());
+          .pipe(lint());
       }
 
-      if (appConfig.less !== undefined) {
-        addBatchWatch(appConfig.less.watch, function (files) {
-          return gulp.src(appConfig.less.template)
+      if (config.html !== undefined && config.html.watch !== undefined) {
+        addBatchWatch(config.html.watch, function (files) {
+          return gulp.src(config.html.src)
             .pipe(errorPlumber())
-            .pipe(build_less(appConfig.less)())
+            .pipe(build_html(config.html)())
             .pipe(reload());
         });
       }
 
-      if (appConfig.tpl !== undefined) {
-        addBatchWatch(appConfig.tpl.src, function (files) {
-          return gulp.src(appConfig.tpl.src)
+      if (config.less !== undefined && config.less.watch !== undefined) {
+        addBatchWatch(config.less.watch, function (files) {
+          return gulp.src(config.less.src)
             .pipe(errorPlumber())
-            .pipe(rename(function(path){
-              path.dirname = "";
-            }))
-            .pipe(templateCache({standalone: true}))
-            .pipe(copy_to_out(appConfig.tpl.dest)())
+            .pipe(build_less(config.less)())
             .pipe(reload());
         });
       }
 
-      if (appConfig.copy !== undefined){
-        _([appConfig.copy.src, appConfig.copy.dest])
+      if (config.templates !== undefined && config.templates.watch !== undefined) {
+        addBatchWatch(config.templates.watch, function (files) {
+          return gulp.src(config.templates.src)
+            .pipe(errorPlumber())
+            .pipe(build_templates(config.templates)())
+            .pipe(reload());
+        });
+      }
+
+      if (config.copy !== undefined){
+        _([config.copy.src, config.copy.dest])
           .zip()
           .map(function(obj){
             addWatch(obj[0])
@@ -217,13 +215,11 @@ gulp.src(whichConfig)
           });
       }
 
-      if (appConfig.karma !== undefined){
-        _.extend(appConfig.karma, karmaConfig);
-        karmaServers.push(spawn('node',
-          [path.join(__dirname, 'karmaBackground.js'), JSON.stringify(appConfig.karma)],
+      if (config.karma !== undefined){
+        karmaServer = spawn('node',
+          [path.join(__dirname, 'karmaBackground.js'), JSON.stringify(config.karma)],
           {stdio: 'inherit'}
-        ));
+        );
       }
-    });
-  }));
+    }));
 });

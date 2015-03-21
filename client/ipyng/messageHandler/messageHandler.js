@@ -1,4 +1,4 @@
-angular.module('ipyng.kernel.messageHandler', ['ipyng.kernel.messageHandler.websocket', 'ipyng.utils', 'ng.lodash'])
+angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng.utils', 'ng.lodash'])
   .factory('ipySessionId', function(_){
     return _.uniqueId();
   })

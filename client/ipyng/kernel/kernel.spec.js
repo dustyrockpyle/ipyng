@@ -1,6 +1,6 @@
 describe("ipyKernel", function () {
-  beforeEach(module('ipyng.kernel.messageHandler'));
-  beforeEach(module('ipyng.kernel.kernelManager'));
+  beforeEach(module('ipyng.messageHandler'));
+  beforeEach(module('ipyng.kernel'));
 
   var $httpBackend, $q, $rootScope, ipyMessage;
   var messageHandlerMock = function () {
