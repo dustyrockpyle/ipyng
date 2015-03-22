@@ -2,11 +2,13 @@ describe("ipyMessageHandler", function() {
   beforeEach(module('ipyng.messageHandler.websocket'));
   beforeEach(module('ipyng.messageHandler'));
 
+  var ipyMessage;
   var websocketHandlerMock = function() {
     var mock = {};
 
     mock.send = function(url, message){
-      mock.messages.push({'url': url, 'message': JSON.parse(message)});
+      message = ipyMessage.parseMessage(message);
+      mock.messages.push({'url': url, 'message': message});
     };
     mock.registerOnMessageCallback = function(url, callback) {
       mock.callbacks[url] = callback;
@@ -41,7 +43,8 @@ describe("ipyMessageHandler", function() {
   }));
 
   it("should register the channel callback", inject(
-    function (ipyMessageHandler, ipyWebsocketHandler) {
+    function (ipyMessageHandler, ipyWebsocketHandler, _ipyMessage_) {
+      ipyMessage = _ipyMessage_;
       ipyWebsocketHandler.reset();
       ipyMessageHandler.registerChannel("1");
       expect(Object.keys(ipyWebsocketHandler.callbacks).length).toEqual(1);
@@ -58,34 +61,38 @@ describe("ipyMessageHandler", function() {
       var message2 = ipyMessage.makeMessage("test2");
       var message2Header = ipyMessage.getHeader(message2);
       var promise1 = ipyMessageHandler.sendShellRequest(kernelID, message1);
-      expect(ipyWebsocketHandler.messages.pop().message).toEqual(message1);
+      expect(ipyMessage.getHeader(ipyWebsocketHandler.messages.pop().message)).toEqual(message1Header);
       var promise2 = ipyMessageHandler.sendShellRequest(kernelID, message2);
-      expect(ipyWebsocketHandler.messages.pop().message).toEqual(message2);
+      expect(ipyMessage.getHeader(ipyWebsocketHandler.messages.pop().message)).toEqual(message2Header);
 
       promise1.then(resolve, null, notify);
       var url = ipyMessageHandler.channelUrl(kernelID);
 
       var iopubMessage = ipyMessage.makeMessage('test3', {}, message1Header, 'iopub');
+      var iopubHeader = ipyMessage.getHeader(iopubMessage);
       ipyWebsocketHandler.callbacks[url](makeEvent(iopubMessage));
       $rootScope.$apply();
-      expect(notifications.pop()).toEqual(iopubMessage);
+      expect(ipyMessage.getHeader(notifications.pop())).toEqual(iopubHeader);
 
       var stdinMessage = ipyMessage.makeMessage('test4', {}, message1Header, 'stdin');
+      var stdinHeader = ipyMessage.getHeader(stdinMessage);
       ipyWebsocketHandler.callbacks[url](makeEvent(stdinMessage));
       $rootScope.$apply();
-      expect(notifications.pop()).toEqual(stdinMessage);
+      expect(ipyMessage.getHeader(notifications.pop())).toEqual(stdinHeader);
 
       expect(resolveMessage).toBeNull();
       var shellMessage = ipyMessage.makeMessage('test5', {}, message1Header, 'shell');
+      var shellHeader = ipyMessage.getHeader(shellMessage);
       ipyWebsocketHandler.callbacks[url](makeEvent(shellMessage));
       $rootScope.$apply();
 
       expect(resolveMessage).toBeNull();
       var idleMessage = ipyMessage.makeStatusReply('idle', message1Header);
+      var idleHeader = ipyMessage.getHeader(idleMessage);
       ipyWebsocketHandler.callbacks[url](makeEvent(idleMessage));
       $rootScope.$apply();
-      expect(notifications.pop()).toEqual(idleMessage);
-      expect(resolveMessage).toEqual(shellMessage);
+      expect(ipyMessage.getHeader(notifications.pop())).toEqual(idleHeader);
+      expect(ipyMessage.getHeader(resolveMessage)).toEqual(shellHeader);
     }
   ));
 })

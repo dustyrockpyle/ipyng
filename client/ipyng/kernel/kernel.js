@@ -3,19 +3,18 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
     var ipyKernel = {};
     var kernelDeferreds = {};
     var kernels = {};
-    var sessions = {};
+    var kernelGuids = {};
 
     ipyKernel.kernels = kernels;
-    ipyKernel.sessions = sessions;
+    ipyKernel.kernelGuids = kernelGuids;
 
-    var Kernel = function(kernelInfo, id, kernelGuid, session, unregister){
+    var Kernel = function(kernelInfo, id, kernelGuid, unregister){
       _.assign(this, kernelInfo);
       this.id = id;
-      this.session = session;
       this.guid = kernelGuid;
       this.unregister = unregister;
       kernels[id] = this;
-      sessions[session] = this;
+      kernelGuids[this.guid] = this;
     };
 
     ipyKernel.retrieveStartedKernels = function () {
@@ -60,8 +59,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         })
         .then(function(result){
           var kernelInfo = ipyMessage.getContent(result);
-          var session = ipyMessage.getSession(result);
-          var kernel = new Kernel(kernelInfo, kernelId, kernelGuid, session, unregister);
+          var kernel = new Kernel(kernelInfo, kernelId, kernelGuid, unregister);
           deferred.resolve(kernel);
           return kernel;
         }, null, ipyKernel.handleNotify(kernelId));

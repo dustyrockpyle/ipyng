@@ -43,7 +43,7 @@ angular.module('ipyng.messageHandler.websocket', ['ng.lodash'])
     var callAllCallbacks = function (url, callback_type, event) {
       var callbacks = websocketHandler.connections[url][callback_type];
       _.forEach(callbacks, function(callback){
-        callback(event);
+        callback(event, url);
       });
     };
 

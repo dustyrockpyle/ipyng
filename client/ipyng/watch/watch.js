@@ -8,8 +8,8 @@ angular.module('ipyng.watch', ['ng.lodash', 'ipyng.messageHandler', 'ipyng.kerne
       messageHandler.handleIopubMessage = function(message){
         var ipyMessage = $injector.get('ipyMessage');
         if(ipyMessage.getMessageType(message) == 'execute_input') {
-          var session = ipyMessage.getSession(message);
-          var kernel = $injector.get('ipyKernel').sessions[session];
+          var guid = ipyMessage.getKernelGuid(message);
+          var kernel = $injector.get('ipyKernel').kernelGuids[guid];
           $injector.get('ipyWatch').refresh(kernel.id);
         }
         handleIopubMessage(message);

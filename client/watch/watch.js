@@ -21,7 +21,6 @@ angular.module('ipy.watch', ['ipyng', 'ng.lodash', 'templates'])
             scope.expressions = expressions;
             return;
           }
-          console.log(expressions);
 
           // For now just destroy and recreate all watches for simplicity.
           _.forEach(scope.watches, function(watch){

@@ -5,11 +5,13 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
   .factory('ipyUsername', function(){
     return '';
   })
-  .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils, $location, $q, _, $timeout) {
+  .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils,
+                                          ipySessionId, $location, $q, _, $timeout) {
     var ipyMessageHandler = {};
 
     ipyMessageHandler.channelUrl = function (kernelGuid) {
-      return ipyUtils.url_path_join("ws://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid, 'channels');
+      return ipyUtils.url_path_join("ws://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid,
+        'channels?session_id=' + ipySessionId);
     };
 
     ipyMessageHandler.httpUrl = function (kernelGuid, endpoint) {
@@ -57,16 +59,18 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
       deferredRequests[parentID].notify(message);
     };
 
-    ipyMessageHandler.handleChannelReply = function(event) {
-      var message = JSON.parse(event.data);
+    ipyMessageHandler.handleChannelReply = function(event, url) {
+      var message = ipyMessage.parseMessage(event.data, kernelGuids[url]);
       if(message.channel == 'shell') ipyMessageHandler.handleShellReply(message);
       else if (message.channel == 'iopub') ipyMessageHandler.handleIopubMessage(message);
       else if (message.channel == 'stdin') ipyMessageHandler.handleStdinRequest(message);
       else throw "Unknown channel";
     };
 
+    var kernelGuids = {};
     ipyMessageHandler.registerChannel = function (kernelGuid) {
       var url = ipyMessageHandler.channelUrl(kernelGuid);
+      kernelGuids[url] = kernelGuid;
       return ipyWebsocketHandler.registerOnMessageCallback(url, ipyMessageHandler.handleChannelReply);
     };
     return ipyMessageHandler;
@@ -101,6 +105,16 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
 
     ipyMessage.getParentHeader = function(message) {
       return message.parent_header;
+    };
+
+    ipyMessage.parseMessage = function(data, kernelGuid) {
+      var message = JSON.parse(data);
+      message.kernel_guid = kernelGuid;
+      return message;
+    };
+
+    ipyMessage.getKernelGuid = function(message) {
+      return message.kernel_guid;
     };
 
     ipyMessage.makeMessage = function (messageType, content, parentHeader, channel, metadata) {
