@@ -13,5 +13,17 @@ angular.module('test.routes', ['ui.router', 'ipyng'])
         controller: function(kernel) {
 
         }
+      })
+      .state('debug', {
+        url: '/debug',
+        templateUrl: 'test-debug.tpl.html',
+        resolve: {
+          kernel: function(ipyKernel) {
+            return ipyKernel.getOrStartKernel('test', 'python');
+          }
+        },
+        controller: function(kernel){
+
+        }
       });
   });

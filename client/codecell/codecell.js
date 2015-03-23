@@ -15,13 +15,10 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror'])
           scope.stream = '';
           scope.output = '';
           scope.executionCount = '*';
-          kernel.execute(scope.input)
+          kernel.execute(scope.input, function(stdout) { scope.stream += stdout; })
             .then(function (result) {
               scope.output = result.text;
               scope.executionCount = result.execution_count;
-            }, null,
-            function (result){
-              scope.stream += result;
             });
         };
       }

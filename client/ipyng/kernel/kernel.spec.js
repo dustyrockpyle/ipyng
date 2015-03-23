@@ -134,9 +134,16 @@ describe("ipyKernel", function () {
     var sentMessage;
     var sentContent;
     var sentHeader;
+    var stdout = [];
+
+    stdoutHandler = function(stream){
+      stdout.push(stream);
+    };
+
     describe("execute", function () {
       beforeEach(inject(function(ipyKernel, ipyMessageHandler){
-        promise = ipyKernel.execute(kernel1Id, code, false, false, true);
+        stdout = [];
+        promise = ipyKernel.execute(kernel1Id, code, stdoutHandler, false, false, true);
         $rootScope.$apply();
         sentMessage = ipyMessageHandler.message;
         sentContent = ipyMessage.getContent(sentMessage);
@@ -149,22 +156,17 @@ describe("ipyKernel", function () {
           expect(sentContent.code).toEqual(code);
         }));
 
-      it("should notify with iopub stream messages", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
-        var iopubMessages = [];
-        promise.then(null, null,
-          function (iopubMessage) {
-            iopubMessages.push(iopubMessage);
-          });
+      it("should call stdoutHandler with iopub stream messages", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
         var text = 'somemessage';
         var firstMessage = ipyMessage.makeIopubStream(text, sentHeader);
         ipyMessageHandler.iopubHandler(firstMessage);
         $rootScope.$apply();
-        expect(iopubMessages[0]).toEqual(text);
+        expect(stdout[0]).toEqual(text);
         var text2 = 'somemessage2';
         var secondMessage = ipyMessage.makeIopubStream(text2, sentHeader);
         ipyMessageHandler.iopubHandler(secondMessage);
         $rootScope.$apply();
-        expect(iopubMessages[1]).toEqual(text2);
+        expect(stdout[1]).toEqual(text2);
       }));
 
       it("should resolve with the execute results", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
@@ -212,7 +214,7 @@ describe("ipyKernel", function () {
           var response;
           ipyMessageHandler.stdinHandler(ipyMessage.makeInputRequest(firstRequest, null, sentHeader))
             .then(function(stdinResponse){
-              response = stdinResponse;
+              response = ipyMessage.getContent(stdinResponse).value;
             });
           $rootScope.$apply();
           expect(firstResult.isRequest).toBeTruthy();
@@ -221,7 +223,7 @@ describe("ipyKernel", function () {
 
           ipyMessageHandler.stdinHandler(ipyMessage.makeInputRequest(secondRequest, null, sentHeader))
             .then(function(stdinResponse){
-              response = stdinResponse;
+              response =  ipyMessage.getContent(stdinResponse).value;
             });
           $rootScope.$apply();
           expect(secondResult.isRequest).toBeTruthy();
@@ -238,7 +240,7 @@ describe("ipyKernel", function () {
 
       it("should pass appropriate options to the execute request",
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
-          ipyKernel.execute(kernel1Id, 'some code', true, true, true);
+          ipyKernel.execute(kernel1Id, 'some code', stdoutHandler, true, true, true);
           $rootScope.$apply();
           var content = ipyMessage.getContent(ipyMessageHandler.message);
           expect(content.silent).toBeTruthy();

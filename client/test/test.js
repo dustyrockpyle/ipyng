@@ -5,5 +5,6 @@ angular.module('test', [
   'ipy.codecell',
   'ipy.psutil',
   'ipy.watch',
+  'ipy.debugger',
   'test.routes'
 ]);

@@ -94,22 +94,23 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
       }
     };
 
-    ipyKernel.executeSilent = function(kernelId, code) {
-      return ipyKernel.execute(kernelId, code, false, true, false);
+    ipyKernel.executeSilent = function(kernelId, code, stdoutHandler) {
+      return ipyKernel.execute(kernelId, code, stdoutHandler, false, true, false);
     };
 
-    ipyKernel.executeStdin = function(kernelId, code) {
-      return ipyKernel.execute(kernelId, code, true, false, true);
+    ipyKernel.executeStdin = function(kernelId, code, stdoutHandler) {
+      return ipyKernel.execute(kernelId, code, stdoutHandler, true, false, true);
     };
 
-    ipyKernel.executeStdinSilent = function(kernelId, code) {
-      return ipyKernel.execute(kernelId, code, false, true, true);
+    ipyKernel.executeStdinSilent = function(kernelId, code, stdoutHandler) {
+      return ipyKernel.execute(kernelId, code, stdoutHandler, false, true, true);
     };
 
-    ipyKernel.execute = function (kernelId, code, storeHistory, silent, allowStdin) {
+    ipyKernel.execute = function (kernelId, code, stdoutHandler, storeHistory, silent, allowStdin) {
       storeHistory = _.isUndefined(storeHistory) ? true : storeHistory;
       silent = _.isUndefined(silent) ? false : silent;
       allowStdin = _.isUndefined(allowStdin) ? false : allowStdin;
+      stdoutHandler = stdoutHandler || _.noop;
       var message = ipyMessage.makeExecuteMessage(code, silent, storeHistory, {}, allowStdin);
       var firstDeferred = $q.defer();
       var latestDeferred = firstDeferred;
@@ -123,7 +124,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         if (type == 'stream' && content.name == 'stdout'){
           result.stdout.push(content.text);
           stdout.push(content.text);
-          firstDeferred.notify(content.text);
+          stdoutHandler(content.text);
         }
         else if (type == 'execute_result') {
           _.assign(result, content);
@@ -139,13 +140,15 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         var currentDeferred = latestDeferred;
         latestDeferred = $q.defer();
         var replyDeferred = $q.defer();
+        var header = ipyMessage.getHeader(message);
 
         var result = {isRequest: true, stdout: stdout};
         stdout = [];
         _.assign(result, ipyMessage.getContent(message));
 
         result.reply = function(inputReply) {
-          replyDeferred.resolve(inputReply);
+          var message = ipyMessage.makeInputReply(inputReply, header);
+          replyDeferred.resolve(message);
           return latestDeferred.promise;
         };
 
@@ -181,7 +184,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         .then(function(response){
           var results = _.values(ipyMessage.getContent(response).user_expressions);
           _.forEach(results, function(result){
-            result.text = result.data['text/plain'];
+            if(result.data) result.text = result.data['text/plain'];
           });
           if(isArray) return results;
           return results[0];
