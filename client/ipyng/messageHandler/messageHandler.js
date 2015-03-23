@@ -18,45 +18,59 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
       return ipyUtils.url_path_join("http://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid, endpoint);
     };
 
-    var deferredRequests = {};
-    var deferredIdle = {};
-    ipyMessageHandler.sendShellRequest = function (kernelGuid, message) {
-      var msgId, reply, idle;
-      reply = $q.defer();
-      idle = $q.defer();
+
+    var shellHandlers = {};
+    var ShellHandler = function(kernelGuid, message, iopubHandler, stdinHandler) {
+      this.msgId = ipyMessage.getMessageID(message);
+      shellHandlers[this.msgId] = this;
+      this.reply = $q.defer();
+      this.idle = $q.defer();
+      this.iopubHandler = iopubHandler || _.noop;
+      this.stdinHandler = stdinHandler; // Dunno what to do if this is empty and stdin is required. Guess we'll hang.
+    };
+
+    ipyMessageHandler.sendShellRequest = function (kernelGuid, message, stdinHandler, stdoutHandler) {
+      var msgId = ipyMessage.getHeader(message);
+      var handler = new ShellHandler(kernelGuid, message, stdinHandler, stdoutHandler);
       msgId = ipyMessage.getMessageID(message);
-      deferredRequests[msgId] = reply;
-      deferredIdle[msgId] = idle;
-      $q.all([reply.promise, idle.promise])
+
+      // We only want to resolve the shell request after the engine declares itself idle
+      // and the execute_result has returned.
+      // This is assuming all the execute_result and display_data messages are sent before
+      // this condition is met...
+      $q.all([handler.reply.promise, handler.idle.promise])
         .then(function(results){
           $timeout(function(){
-            delete deferredRequests[msgId];
-            delete deferredIdle[msgId];
+            delete shellHandlers[msgId];
           });
         });
-      ipyWebsocketHandler.send(ipyMessageHandler.channelUrl(kernelGuid), JSON.stringify(message));
-      return reply.promise;
+      ipyWebsocketHandler.send(ipyMessageHandler.channelUrl(kernelGuid), ipyMessage.stringifyMessage(message));
+      return handler.reply.promise;
     };
 
     ipyMessageHandler.handleShellReply = function (message) {
       var parentId = ipyMessage.getParentMessageID(message);
-      deferredIdle[parentId].promise
+      shellHandlers[parentId].idle.promise
         .then(function(result){
-          deferredRequests[parentId].resolve(message);
+          shellHandlers[parentId].reply.resolve(message);
         });
     };
 
     ipyMessageHandler.handleIopubMessage = function (message) {
       var parentId = ipyMessage.getParentMessageID(message);
-      deferredRequests[parentId].notify(message);
+      shellHandlers[parentId].iopubHandler(message);
       if(ipyMessage.getMessageType(message) == 'status' && ipyMessage.getContent(message).execution_state == 'idle' ) {
-        deferredIdle[parentId].resolve();
+        shellHandlers[parentId].idle.resolve();
       }
     };
 
     ipyMessageHandler.handleStdinRequest = function (message) {
-      var parentID = ipyMessage.getParentMessageID(message);
-      deferredRequests[parentID].notify(message);
+      var parentId = ipyMessage.getParentMessageID(message);
+      var guid = ipyMessage.getKernelGuid(message);
+      $q.when(shellHandlers[parentId].stdinHandler(message))
+        .then(function(response){
+          ipyWebsocketHandler.send(ipyMessageHandler.channelUrl(guid), ipyMessage.stringifyMessage(response));
+        });
     };
 
     ipyMessageHandler.handleChannelReply = function(event, url) {
@@ -73,8 +87,8 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
       kernelGuids[url] = kernelGuid;
       return ipyWebsocketHandler.registerOnMessageCallback(url, ipyMessageHandler.handleChannelReply);
     };
-    return ipyMessageHandler;
 
+    return ipyMessageHandler;
   })
   .factory('ipyMessage', function (_, ipySessionId, ipyUsername) {
     var ipyMessage = {};
@@ -148,14 +162,14 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
       return ipyMessage.makeMessage('execute_request', content);
     };
 
-    ipyMessage.makeExecuteReply = function(status, executionCount, userExpressions, payload){
+    ipyMessage.makeExecuteReply = function(status, executionCount, userExpressions, payload, parentHeader){
       var content = {
         status: status,
         execution_count: executionCount,
         user_expressions: userExpressions,
         payload: payload
       };
-      return ipyMessage.makeMessage('execute_reply', content);
+      return ipyMessage.makeMessage('execute_reply', content, parentHeader);
     };
 
     ipyMessage.makeExecuteResult = function(data, executionCount, metadata, parentHeader){
@@ -259,9 +273,18 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
       return ipyMessage.makeMessage('status', content, parentHeader, 'iopub');
     };
 
+    ipyMessage.makeInputRequest = function(prompt, password, parentHeader) {
+      var content = {prompt: prompt, password: password};
+      return ipyMessage.makeMessage('input_request', content, parentHeader, 'stdin');
+    };
+
     ipyMessage.makeInputReply = function (value, parentHeader) {
       var content = {'value': value};
-      return ipyMessage.makeMessage('input_reply', content, parentHeader);
+      return ipyMessage.makeMessage('input_reply', content, parentHeader, 'stdin');
+    };
+
+    ipyMessage.stringifyMessage = function(message) {
+      return JSON.stringify(message);
     };
 
     return ipyMessage;

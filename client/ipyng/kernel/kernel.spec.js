@@ -22,10 +22,12 @@ describe("ipyKernel", function () {
       mock.deferred.notify(message);
     };
 
-    mock.sendShellRequest = function (kernelId, message) {
+    mock.sendShellRequest = function (kernelId, message, iopubHandler, stdinHandler) {
       mock.deferred = $q.defer();
       mock.kernelId = kernelId;
       mock.message = message;
+      mock.iopubHandler = iopubHandler;
+      mock.stdinHandler = stdinHandler;
       if(ipyMessage.getMessageType(message) == 'kernel_info_request')
         mock.resolve(ipyMessage.makeMessage('kernel_info_reply', {}, ipyMessage.getParentHeader(message)));
       return mock.deferred.promise;
@@ -127,57 +129,112 @@ describe("ipyKernel", function () {
       $httpBackend.flush();
     }));
 
+    var code = "this is some code";
+    var promise;
+    var sentMessage;
+    var sentContent;
+    var sentHeader;
     describe("execute", function () {
-      it("should send a shell request to the specified kernel containing the sent code,  " +
-        "notify with iopub stream messages, and resolve with the execute reply",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
-          var code = "this is some code";
-          var promise = ipyKernel.execute(kernel1Id, code);
-          $rootScope.$apply();
-          expect(ipyMessageHandler.kernelId).toEqual(kernel1Guid);
-          var sentMessage = ipyMessageHandler.message;
-          var content = ipyMessage.getContent(sentMessage);
-          expect(content.code).toEqual(code);
+      beforeEach(inject(function(ipyKernel, ipyMessageHandler){
+        promise = ipyKernel.execute(kernel1Id, code, false, false, true);
+        $rootScope.$apply();
+        sentMessage = ipyMessageHandler.message;
+        sentContent = ipyMessage.getContent(sentMessage);
+        sentHeader = ipyMessage.getHeader(sentMessage);
+      }));
 
-          var executeResult = null;
-          var iopubMessages = [];
-          promise.then(function (result) {
-              executeResult = result;
-            }, null,
-            function (iopubMessage) {
-              iopubMessages.push(iopubMessage);
+      it("should send a shell request to the specified kernel containing the sent code",
+        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
+          expect(ipyMessageHandler.kernelId).toEqual(kernel1Guid);
+          expect(sentContent.code).toEqual(code);
+        }));
+
+      it("should notify with iopub stream messages", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
+        var iopubMessages = [];
+        promise.then(null, null,
+          function (iopubMessage) {
+            iopubMessages.push(iopubMessage);
+          });
+        var text = 'somemessage';
+        var firstMessage = ipyMessage.makeIopubStream(text, sentHeader);
+        ipyMessageHandler.iopubHandler(firstMessage);
+        $rootScope.$apply();
+        expect(iopubMessages[0]).toEqual(text);
+        var text2 = 'somemessage2';
+        var secondMessage = ipyMessage.makeIopubStream(text2, sentHeader);
+        ipyMessageHandler.iopubHandler(secondMessage);
+        $rootScope.$apply();
+        expect(iopubMessages[1]).toEqual(text2);
+      }));
+
+      it("should resolve with the execute results", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
+        var executeResult;
+        promise.then(function(result){
+          executeResult = result;
+        });
+        var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
+        ipyMessageHandler.resolve(response);
+
+        var out = {'text/plain': 'the output'};
+        var outMessage = ipyMessage.makeExecuteResult(out, 1, {}, sentHeader);
+        ipyMessageHandler.iopubHandler(outMessage);
+
+        var display = {'image/png': 'arbitrarypng'};
+        var displayMessage = ipyMessage.makeIopubDisplay(display, sentHeader);
+        ipyMessageHandler.iopubHandler(displayMessage);
+        $rootScope.$apply();
+
+        expect(executeResult.text).toEqual(out['text/plain']);
+        expect(executeResult['image/png']).toEqual(display['image/png']);
+      }));
+
+      it("should send input_reply messages for stdin requests",
+        inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
+          var firstResult, secondResult, thirdResult;
+          var firstRequest = 'What do you get when you multiply 6 by 9?';
+          var firstResponse = '42';
+          var secondRequest = 'Would it save you lots of time if I just gave up and went mad now?';
+          var secondResponse = "Don't panic";
+          var executeResult = 'So long and thanks for all the fish.';
+          promise
+            .then(function(result){
+              firstResult = result;
+              return result.reply(firstResponse);
+            })
+            .then(function(result){
+              secondResult = result;
+              return result.reply(secondResponse);
+            })
+            .then(function(result){
+              thirdResult = result;
+            });
+
+          var response;
+          ipyMessageHandler.stdinHandler(ipyMessage.makeInputRequest(firstRequest, null, sentHeader))
+            .then(function(stdinResponse){
+              response = stdinResponse;
             });
           $rootScope.$apply();
-          var parentHeader = ipyMessage.getHeader(sentMessage);
-          var text = 'somemessage';
-          var firstMessage = ipyMessage.makeIopubStream(text, parentHeader);
-          ipyMessageHandler.notify(firstMessage);
+          expect(firstResult.isRequest).toBeTruthy();
+          expect(firstResult.prompt).toEqual(firstRequest);
+          expect(response).toEqual(firstResponse);
+
+          ipyMessageHandler.stdinHandler(ipyMessage.makeInputRequest(secondRequest, null, sentHeader))
+            .then(function(stdinResponse){
+              response = stdinResponse;
+            });
           $rootScope.$apply();
+          expect(secondResult.isRequest).toBeTruthy();
+          expect(secondResult.prompt).toEqual(secondRequest);
+          expect(response).toEqual(secondResponse);
 
-          expect(iopubMessages[0]).toEqual(text);
 
-          var text2 = 'somemessage2';
-          var secondMessage = ipyMessage.makeIopubStream(text2, parentHeader);
-          ipyMessageHandler.notify(secondMessage);
+          var resultMessage = ipyMessage.makeExecuteResult({'text/plain': executeResult}, 1, {}, sentHeader);
+          ipyMessageHandler.iopubHandler(resultMessage);
+          ipyMessageHandler.resolve(ipyMessage.makeExecuteReply('ok', 1, []));
           $rootScope.$apply();
-          expect(iopubMessages[1]).toEqual(text2);
-
-          var out = {'text/plain': 'the output'};
-          var outMessage = ipyMessage.makeExecuteResult(out, 1, {}, parentHeader);
-          ipyMessageHandler.notify(outMessage);
-
-          var display = {'image/png': 'arbitrarypng'};
-          var displayMessage = ipyMessage.makeIopubDisplay(display, parentHeader);
-          ipyMessageHandler.notify(displayMessage);
-          $rootScope.$apply();
-
-          var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
-          ipyMessageHandler.resolve(response);
-          $rootScope.$apply();
-          expect(executeResult.text).toEqual(out['text/plain']);
-          expect(executeResult['image/png']).toEqual(display['image/png']);
-        })
-      );
+          expect(thirdResult.text).toEqual(executeResult);
+        }));
 
       it("should pass appropriate options to the execute request",
         inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {

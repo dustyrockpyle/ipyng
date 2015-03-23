@@ -100,7 +100,15 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
     };
 
     ipyKernel.executeSilent = function(kernelId, code) {
-      return ipyKernel.execute(kernelId, code, false, false, false);
+      return ipyKernel.execute(kernelId, code, false, true, false);
+    };
+
+    ipyKernel.executeStdin = function(kernelId, code) {
+      return ipyKernel.execute(kernelId, code, true, false, true);
+    };
+
+    ipyKernel.executeStdinSilent = function(kernelId, code) {
+      return ipyKernel.execute(kernelId, code, false, true, true);
     };
 
     ipyKernel.execute = function (kernelId, code, storeHistory, silent, allowStdin) {
@@ -108,33 +116,56 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
       silent = _.isUndefined(silent) ? false : silent;
       allowStdin = _.isUndefined(allowStdin) ? false : allowStdin;
       var message = ipyMessage.makeExecuteMessage(code, silent, storeHistory, {}, allowStdin);
-      var deferred = $q.defer();
+      var firstDeferred = $q.defer();
+      var latestDeferred = firstDeferred;
       var result = {stdout: []};
+
+      var iopubHandler = function(message) {
+        var type = ipyMessage.getMessageType(message);
+        var content = ipyMessage.getContent(message);
+        if (type == 'stream' && content.name == 'stdout'){
+          result.stdout.push(content.text);
+          firstDeferred.notify(content.text);
+          if(firstDeferred !== latestDeferred) latestDeferred.notify(content.text);
+        }
+        else if (type == 'execute_result') {
+          _.assign(result, content);
+          _.assign(result, content.data);
+        }
+        else if (type == 'display_data') {
+          _.assign(result, content);
+          _.assign(result, content.data);
+        }
+      };
+
+      var stdinHandler = function(message) {
+        var currentDeferred = latestDeferred;
+        latestDeferred = $q.defer();
+        var replyDeferred = $q.defer();
+
+        var result = {isRequest: true};
+        _.assign(result, ipyMessage.getContent(message));
+
+        result.reply = function(inputReply) {
+          replyDeferred.resolve(inputReply);
+          return latestDeferred.promise;
+        };
+
+        currentDeferred.resolve(result);
+        return replyDeferred.promise;
+      };
+
       ipyKernel.getKernel(kernelId)
         .then(function(kernel){
-          return ipyMessageHandler.sendShellRequest(kernel.guid, message);
+          return ipyMessageHandler.sendShellRequest(kernel.guid, message, iopubHandler, stdinHandler);
         })
         .then(function (response) {
           var content = ipyMessage.getContent(response);
           result.text = result['text/plain'];
-          deferred.resolve(result);
-        }, null, ipyKernel.handleNotify(kernelId, function(message){
-          var msg_type = ipyMessage.getMessageType(message);
-          var content = ipyMessage.getContent(message);
-          if (msg_type == 'stream' && content.name == 'stdout'){
-            result.stdout.push(content.text);
-            deferred.notify(content.text);
-          }
-          else if (msg_type == 'execute_result') {
-            _.assign(result, content);
-            _.assign(result, content.data);
-          }
-          else if (msg_type == 'display_data') {
-            _.assign(result, content);
-            _.assign(result, content.data);
-          }
-        }));
-      return deferred.promise;
+          result.isRequest = false;
+          latestDeferred.resolve(result);
+        });
+      return firstDeferred.promise;
     };
 
     ipyKernel.evaluate = function (kernelId, expressions) {
