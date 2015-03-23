@@ -89,7 +89,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
 
     ipyKernel.handleStatus = function(message) {
       if(ipyMessage.getMessageType(message) == 'status'){
-        var kernel = kernelGuids[ipyKernel.getKernel(ipyMessage.getKernelGuid(message))];
+        var kernel = kernelGuids[ipyMessage.getKernelGuid(message)];
         kernel.status = ipyMessage.getContent(message).execution_state;
       }
     };
