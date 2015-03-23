@@ -52,7 +52,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
     ipyKernel.connectKernel = function(kernelId, kernelGuid) {
       var deferred = getOrCreateKernelDeferred(kernelId);
       var unregister = ipyMessageHandler.registerChannel(kernelGuid);
-      return ipyMessageHandler.sendShellRequest(kernelGuid, ipyMessage.makeKernelInfoMessage())
+      return ipyMessageHandler.sendShellRequest(kernelGuid, ipyMessage.makeKernelInfoMessage(), null, ipyKernel.handleStatus)
         .catch(function(error){
           unregister();
           return $q.reject(error);
@@ -62,7 +62,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
           var kernel = new Kernel(kernelInfo, kernelId, kernelGuid, unregister);
           deferred.resolve(kernel);
           return kernel;
-        }, null, ipyKernel.handleNotify(kernelId));
+        });
     };
 
     ipyKernel.getKernel = function(kernelId) {
@@ -87,16 +87,11 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
       return $http.post('/api/kernels/restart/' + kernels[kernelId].guid, null);
     };
 
-    ipyKernel.handleNotify = function(kernelId, callback) {
-      return function(message){
-        return ipyKernel.getKernel(kernelId)
-          .then(function(kernel){
-            if(ipyMessage.getMessageType(message) == "status"){
-              kernel.status = ipyMessage.getContent(message).execution_state;
-            }
-            if(!_.isUndefined(callback)) callback(message);
-          });
-      };
+    ipyKernel.handleStatus = function(message) {
+      if(ipyMessage.getMessageType(message) == 'status'){
+        var kernel = kernelGuids[ipyKernel.getKernel(ipyMessage.getKernelGuid(message))];
+        kernel.status = ipyMessage.getContent(message).execution_state;
+      }
     };
 
     ipyKernel.executeSilent = function(kernelId, code) {
@@ -119,14 +114,16 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
       var firstDeferred = $q.defer();
       var latestDeferred = firstDeferred;
       var result = {stdout: []};
+      var stdout = [];
 
       var iopubHandler = function(message) {
+        ipyKernel.handleStatus(message);
         var type = ipyMessage.getMessageType(message);
         var content = ipyMessage.getContent(message);
         if (type == 'stream' && content.name == 'stdout'){
           result.stdout.push(content.text);
+          stdout.push(content.text);
           firstDeferred.notify(content.text);
-          if(firstDeferred !== latestDeferred) latestDeferred.notify(content.text);
         }
         else if (type == 'execute_result') {
           _.assign(result, content);
@@ -143,7 +140,8 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         latestDeferred = $q.defer();
         var replyDeferred = $q.defer();
 
-        var result = {isRequest: true};
+        var result = {isRequest: true, stdout: stdout};
+        stdout = [];
         _.assign(result, ipyMessage.getContent(message));
 
         result.reply = function(inputReply) {
@@ -292,6 +290,8 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         this.restartKernel = makeKernelFunction(ipyKernel.restartKernel, this.id);
         this.execute = makeKernelFunction(ipyKernel.execute, this.id);
         this.executeSilent = makeKernelFunction(ipyKernel.executeSilent, this.id);
+        this.executeStdin = makeKernelFunction(ipyKernel.executeStdin, this.id);
+        this.executeStdinSilent = makeKernelFunction(ipyKernel.executeStdinSilent, this.id);
         this.evaluate = makeKernelFunction(ipyKernel.evaluate, this.id);
         this.inspect = makeKernelFunction(ipyKernel.inspect, this.id);
         this.complete = makeKernelFunction(ipyKernel.complete, this.id);

@@ -14,7 +14,7 @@ angular.module('ipy.psutil', ['ipyng', 'ng.lodash', 'templates'])
         var unwatch;
         scope.started = false;
         scope.cpu_percent = '';
-        kernel.executeSilent('import psutil\n');
+        kernel.executeSilent('import psutil');
         scope.start = function(){
           if(scope.started) return;
           scope.started = true;
