@@ -16,7 +16,7 @@ vendor_scripts: &vendor_scripts !prepend
     - *vendor
     - angular/angular.js
     - angular-ui-router/release/angular-ui-router.js
-    - lodash/dist/lodash.js
+    - lodash/lodash.js
     - angular-bootstrap/ui-bootstrap-tpls.js
     - codemirror/lib/codemirror.js
     - codemirror/mode/python/python.js
