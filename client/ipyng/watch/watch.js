@@ -16,8 +16,8 @@ angular.module('ipyng.watch', ['ng.lodash', 'ipyng.messageHandler', 'ipyng.kerne
       };
       return $delegate;
     });
-  }).
-  factory('ipyWatch', function (_, ipyKernel, $q) {
+  })
+  .factory('ipyWatch', function (_, ipyKernel, $q) {
     var ipyWatch = {};
     ipyWatch.expressions = {};
     ipyWatch.createWatch = function (kernel, expression) {
