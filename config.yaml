@@ -1,11 +1,14 @@
 debug: &debug Yes
 static_url: &static_url "http://localhost:9000/"
+ipython_port: 8000
 
 paths:
-    root: &root '../' 
+    root: &root !root
     client: &client !join [*root, client/]
     build: &build !join [*root, build/]
     vendor: &vendor !join [*root, gulp/vendor/]
+    index: &index !join [*build, test/index.html]
+    static: *root
 
 server:
     root: *root
@@ -39,7 +42,7 @@ lint:
 
 html:
     src: !join [*client, test/index.html]
-    dest: !join [*build, test/index.html]
+    dest: *index
     static_url: *static_url
     main: test
     includes: !flatten
