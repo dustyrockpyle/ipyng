@@ -1,0 +1,28 @@
+.debugger{
+  display: flex;
+  flex-direction: column;
+  .top-row{
+    height: 50%;
+    .source{
+    }
+  }
+  .bottom-row{
+    height: 50%;
+    display: flex;
+    flex-direction: row;
+    .stack{
+      width: 30%;
+      display: flex;
+      flex-direction: column;
+      overflow: auto;
+      .frame{
+        min-height: 30px;
+        direction: rtl;
+      }
+    }
+    .locals{
+      width: 70%;
+      overflow: auto;
+    }
+  }
+}

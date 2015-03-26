@@ -1,18 +1,23 @@
 // requires manual injection of kernel to function.
 
-angular.module('ipy.pdb', ['ipyng'])
-  .controller('pdbCtrl', function($scope, $q, kernel, ipyKernel) {
+angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
+  .controller('pdbCtrl', function($scope, $q, kernel, ipyKernel, _) {
     var stdoutDeferreds = [];
     var stdoutHandler = function(stream){
       if(stdoutDeferreds.length) stdoutDeferreds.pop().resolve(stream);
     };
+    var stdoutPromise = function() {
+      stdoutDeferreds.push($q.defer());
+      return _.last(stdoutDeferreds).promise;
+    };
+
     var promise;
     var _this = this;
 
     $scope.currentFrame = null;
     var actualFrame = null;
-    $scope.starting = false;
-    $scope.started = false;
+    $scope.debuggerStarting = false;
+    $scope.debuggerStarted = false;
     $scope.stack = [];
     $scope.args = [];
     $scope.locals = [];
@@ -22,11 +27,11 @@ angular.module('ipy.pdb', ['ipyng'])
       var statement = 'import pdb\n';
       if(code) statement += 'pdb.run(' + code + ')';
       else statement += 'pdb.pm()';
-      $scope.starting = true;
+      $scope.debuggerStarting = true;
       promise = kernel.executeStdinSilent(statement, stdoutHandler)
         .then(function(response){
-          $scope.started = true;
-          $scope.starting = false;
+          $scope.debuggerStarted = true;
+          $scope.debuggerStarting = false;
           return response;
         })
         .then(function(response){
@@ -36,7 +41,6 @@ angular.module('ipy.pdb', ['ipyng'])
     };
 
     var updateStack = function() {
-      var deferred = $q.defer();
       promise = promise
         .then(function(response){
           return response.reply('where');
@@ -60,10 +64,8 @@ angular.module('ipy.pdb', ['ipyng'])
               };
             })
             .value();
-          deferred.resolve($scope.stack);
           return response;
         });
-      return deferred.promise;
     };
 
     var updateLocals = function(){
@@ -98,8 +100,7 @@ angular.module('ipy.pdb', ['ipyng'])
         .then(function(response){
           var reply = response.reply('l 1,10000'); // Seems arbitrarily high enough for now
           var deferred = $q.defer();
-          stdoutDeferreds.push(deferred);
-          return $q.all([reply, deferred.promise]);
+          return $q.all([reply, stdoutPromise()]);
         })
         .then(function(result){
           var response = result[0];
@@ -116,19 +117,32 @@ angular.module('ipy.pdb', ['ipyng'])
         });
     };
 
-    this.evaluate = function(expression){
+    var evaluate = function(expression) {
+      var deferred = $q.defer();
       promise = promise
         .then(function(response){
-          return response.reply('p ' + expression);
+          var reply = response.reply('p ' + expression);
+          return $q.all([reply, stdoutPromise()]);
         })
-        .then(function(response){
-          $scope.expressions[expression] = _.trim(response.stdout[0]);
+        .then(function(result){
+          var response = result[0];
+          var stdout = result[1];
+          deferred.resolve({text: _.trim(response.stdout[0])});
           return response;
         });
+      return deferred.promise;
+    };
+
+    this.evaluate = function(expressions){
+      var resultPromises = [];
+      _.forEach(expressions, function(expression){
+        resultPromises.push(evaluate(expression));
+      });
+      return $q.all(resultPromises);
     };
 
     var updateFrame = function () {
-      if(!$scope.started) return;
+      if(!promise) return;
       var newFrame = $scope.currentFrame;
       promise = promise
         .then(function(response){
@@ -151,18 +165,17 @@ angular.module('ipy.pdb', ['ipyng'])
     $scope.$watch('currentFrame', updateFrame);
 
     this.quit = function(){
-      if($scope.started) {
-        promise = promise
-          .then(function(response){
-            return response.reply('quit');
-          })
-          .then(function(response){
-            actualFrame = null;
-            $scope.currentFrame = null;
-            $scope.started = false;
-            return response;
-          });
-      }
+      promise = promise
+        .then(function(response){
+          if($scope.debuggerStarted) return response.reply('quit');
+          return response;
+        })
+        .then(function(response){
+          actualFrame = null;
+          $scope.currentFrame = null;
+          $scope.debuggerStarted = false;
+          return response;
+        });
     };
 
     $scope.$on('$destroy', function(){

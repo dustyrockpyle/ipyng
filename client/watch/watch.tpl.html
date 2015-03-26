@@ -6,11 +6,12 @@
         </tr></thead>
         <tbody>
             <tr ng-repeat="expression in expressions track by $index">
-                <td><input ng-model="expressions[$index]" ng-model-options="{ updateOn: 'blur'}"
+                <td ng-show="mutable"><input ng-model="expressions[$index]" ng-model-options="{ updateOn: 'blur'}"
                      ng-click="selectText($event)"></td>
+                <td ng-hide="mutable"><span>{{ expression }}</span></td>
                 <td><div class="value">{{ watches[$index].getValue().text }}</div></td>
             </tr>
-            <tr>
+            <tr ng-show="mutable">
                 <td><input ng-model="newExpression" ng-model-options="{ updateOn: 'blur'}"
                      ng-click="selectText($event)"></td>
                 <td></td>

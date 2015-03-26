@@ -1,25 +1,19 @@
 <div class="debugger">
-
-    <div class="source">
-        <ui-codemirror ui-codemirror-opts="{mode: 'python', lineNumbers: true, readOnly: true}" ng-model="source"></ui-codemirror>
+    <div class="top-row">
+        <ui-codemirror class="source" ui-codemirror-opts="{mode: 'python', lineNumbers: true, readOnly: true}" ng-model="source"></ui-codemirror>
     </div>
 
-    <div class="stack">
-       <div ng-repeat="frame in stack">
-           <button class="btn" ng-click="goToFrame($index)"
-           ng-class="{'btn-primary': $index==currentFrame, 'btn-danger': $index!=currentFrame}"
-           >{{ frame.filename }} {{ frame.function }}</button><br>
-       </div>
+    <div class="bottom-row">
+        <div class="stack">
+            <button class="btn frame" ng-click="goToFrame($index)"
+                    ng-class="{'btn-primary': $index==currentFrame, 'btn-danger': $index!=currentFrame}"
+                    ng-repeat="frame in stack"
+                    >{{ frame.filename }} {{ frame.function }}</button>
+        </div>
+
+        <div class="locals">
+            <watch expressions="locals" refresh="refreshLocals"></watch>
+        </div>
     </div>
 
-    <div class="frame">
-        <ul class="locals">
-            <li ng-repeat="local in locals">{{ local }}</li>
-        </ul>
-
-        <ul class="args">
-            <li ng-repeat="arg in args">{{ arg.name }} : {{ arg.value }}</li>
-        </ul>
-
-    </div>
 </div>

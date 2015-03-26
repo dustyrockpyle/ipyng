@@ -5,13 +5,15 @@ angular.module('ipy.watch', ['ipyng', 'ng.lodash', 'templates'])
       restrict: 'E',
       require: '^kernel',
       scope: {
-        expressions: '=?'
+        expressions: '=?',
+        refresh: '=?',
+        mutable: '@?'
       },
       link: function (scope, element, attrs, kernel) {
         var watch;
+        scope.mutable = _.has(attrs, 'mutable');
         scope.expressions = scope.expressions || [];
         scope.watches = [];
-
         scope.$watchCollection('expressions', function(expressions){
           // Delete any empty expressions
           expressions = _.filter(expressions, function(expression){
@@ -30,8 +32,13 @@ angular.module('ipy.watch', ['ipyng', 'ng.lodash', 'templates'])
           _.forEach(expressions, function(expression) {
             scope.watches.push(ipyWatch.createWatch(kernel, expression));
           });
-          ipyWatch.refresh(kernel.id, expressions);
+
+          scope.refresh();
         });
+
+        scope.refresh = function() {
+          ipyWatch.refresh(kernel.id, scope.expressions);
+        };
 
         var newDefault = 'New watch...';
         scope.newExpression = newDefault;
