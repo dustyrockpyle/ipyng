@@ -1,13 +1,17 @@
+.debugger-highlight{
+  background: #e8f2ff;;
+}
+
 .debugger{
   display: flex;
   flex-direction: column;
   .top-row{
-    height: 50%;
-    .source{
+    .CodeMirror{
+
     }
   }
   .bottom-row{
-    height: 50%;
+    border: 2px solid;
     display: flex;
     flex-direction: row;
     .stack{
@@ -16,11 +20,14 @@
       flex-direction: column;
       overflow: auto;
       .frame{
+        margin-left: 1px;
+        margin-right: 1px;
         min-height: 30px;
         direction: rtl;
       }
     }
     .locals{
+      border-left: 1px solid;
       width: 70%;
       overflow: auto;
     }

@@ -1,18 +1,18 @@
-<div class="debugger">
+<div class="debugger" ng-if="debugger.started">
     <div class="top-row">
-        <ui-codemirror class="source" ui-codemirror-opts="{mode: 'python', lineNumbers: true, readOnly: true}" ng-model="source"></ui-codemirror>
+        <ui-codemirror class="source" ui-codemirror-opts="cmOptions" ng-model="debugger.source"></ui-codemirror>
     </div>
 
     <div class="bottom-row">
         <div class="stack">
             <button class="btn frame" ng-click="goToFrame($index)"
-                    ng-class="{'btn-primary': $index==currentFrame, 'btn-danger': $index!=currentFrame}"
-                    ng-repeat="frame in stack"
+                    ng-class="{'btn-primary': $index==debugger.currentFrame, 'btn-danger': $index!=debugger.currentFrame}"
+                    ng-repeat="frame in debugger.stack"
                     >{{ frame.filename }} {{ frame.function }}</button>
         </div>
 
         <div class="locals">
-            <watch expressions="locals" refresh="refreshLocals"></watch>
+            <watch expressions="debugger.locals" refresh="context.refreshLocals"></watch>
         </div>
     </div>
 

@@ -13,31 +13,36 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
 
     var promise;
     var _this = this;
-
-    $scope.currentFrame = null;
-    var actualFrame = null;
-    $scope.debuggerStarting = false;
-    $scope.debuggerStarted = false;
-    $scope.stack = [];
-    $scope.args = [];
-    $scope.locals = [];
-    $scope.source = '';
+    var d = {};
+    $scope.debugger = d;
+    d.currentFrame = null;
+    d.starting = null;
+    d.started = null;
+    d.stack = [];
+    d.args = [];
+    d.locals = [];
+    d.source = '';
 
     this.start = function(code) {
       var statement = 'import pdb\n';
       if(code) statement += 'pdb.run(' + code + ')';
       else statement += 'pdb.pm()';
-      $scope.debuggerStarting = true;
+      d.starting = true;
+      var deferred = $q.defer();
       promise = kernel.executeStdinSilent(statement, stdoutHandler)
         .then(function(response){
-          $scope.debuggerStarted = true;
-          $scope.debuggerStarting = false;
+          d.started = true;
+          d.starting = false;
           return response;
         })
         .then(function(response){
-          $scope.currentFrame = 0;
+          _this.goToFrame(0)
+            .then(function(){
+              deferred.resolve(true);
+            });
           return response;
         });
+      return deferred.promise;
     };
 
     var updateStack = function() {
@@ -46,7 +51,7 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
           return response.reply('where');
         })
         .then(function(response){
-          $scope.stack = _(response.stdout[0])
+          d.stack = _(response.stdout[0])
             .split('\n') // split to lines
             .reject(_.curry(_.startsWith)(_, '->', 0)) // get rid of the source lines
             .reverse() // we want the top of the stack to be zero
@@ -75,7 +80,7 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
         })
         .then(function(response) {
           var result = response.stdout[0].replace(/'/g, '"');
-          $scope.locals = JSON.parse(result); // Ugly.
+          d.locals = JSON.parse(result); // Ugly.
           return response;
         });
     };
@@ -86,7 +91,7 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
           return response.reply('a');
         })
         .then(function(response){
-          $scope.args = _(_.trim(response.stdout[0]))
+          d.args = _(_.trim(response.stdout[0]))
             .split('\n') // split to lines
             .invoke('split', ' = ') // split to name value pairs
             .map(_.curry(_.zipObject)(['name', 'value'])) // make name, value objects
@@ -96,6 +101,7 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
     };
 
     var updateSource = function(){
+      var deferred = $q.defer();
       promise = promise
         .then(function(response){
           var reply = response.reply('l 1,10000'); // Seems arbitrarily high enough for now
@@ -110,11 +116,13 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
             .invoke('substr', 6) // drop the margin characters
             .value();
           // get rid of the extra character on the current line
-          var currentLine = source[$scope.stack[$scope.currentFrame].lineNumber - 1];
-          source[$scope.stack[$scope.currentFrame].lineNumber - 1] = currentLine.substr(2);
-          $scope.source = source.join('\n'); // remake the text blob
+          var currentLine = source[d.stack[d.currentFrame].lineNumber - 1];
+          source[d.stack[d.currentFrame].lineNumber - 1] = currentLine.substr(2);
+          d.source = source.join('\n'); // remake the text blob
+          deferred.resolve(true);
           return response;
         });
+      return deferred.promise;
     };
 
     var evaluate = function(expression) {
@@ -141,39 +149,42 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
       return $q.all(resultPromises);
     };
 
-    var updateFrame = function () {
-      if(!promise) return;
-      var newFrame = $scope.currentFrame;
+    this.goToFrame = function (newFrame) {
+      if(!promise) return $q.reject("Debugger not initialized");
+      if(newFrame == d.currentFrame) return $q.when(true);
+      var deferred = $q.defer();
       promise = promise
         .then(function(response){
-          if (actualFrame === null) return response;
-          if (actualFrame === newFrame) return response;
-          var diff = newFrame - actualFrame;
+          if (!d.started) return response;
+          if (d.currentFrame === newFrame) return response;
+          var diff = newFrame - d.currentFrame;
           if(diff > 0) return response.reply('u ' + diff);
           else return response.reply('d ' + (-diff));
         })
         .then(function(response){
-          actualFrame = newFrame;
+          d.currentFrame = newFrame;
           updateStack();
           updateLocals();
           updateArgs();
-          updateSource();
+          updateSource()
+            .then(function(){
+              // resolve result after everything has been updated.
+              deferred.resolve(true);
+            });
           return response;
         });
+      return deferred.promise;
     };
-
-    $scope.$watch('currentFrame', updateFrame);
 
     this.quit = function(){
       promise = promise
         .then(function(response){
-          if($scope.debuggerStarted) return response.reply('quit');
+          if(d.started) return response.reply('quit');
           return response;
         })
         .then(function(response){
-          actualFrame = null;
-          $scope.currentFrame = null;
-          $scope.debuggerStarted = false;
+          d.currentFrame = null;
+          d.started = false;
           return response;
         });
     };

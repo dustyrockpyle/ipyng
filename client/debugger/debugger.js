@@ -7,7 +7,7 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
     python: 'pdbCtrl'
   })
   // I don't really know if this is a good idea, but it's easy to do and makes everything work nicely.
-  .factory('ipyDebugPatch', function(ipyKernel, _){
+  .factory('ipyDebugPatch', function(ipyKernel){
 
     var patchedKernels = {};
     var originalEvaluate = ipyKernel.evaluate;
@@ -27,7 +27,7 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
       }
     };
   })
-  .directive('debugger', function ($controller, debugControllers, ipyDebugPatch, $timeout) {
+  .directive('debugger', function ($controller, debugControllers, ipyDebugPatch, $q, $timeout, _) {
     return {
       templateUrl: 'debugger.tpl.html',
       restrict: 'E',
@@ -39,22 +39,71 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
           "        raise ValueError(5)\n" +
           "    return f(x+1)\n" +
           "f(1)";
-        var controllerId = debugControllers[kernel.language_info.name];
+        var language = kernel.language_info.name;
+        var controllerId = debugControllers[language];
         var controller = $controller(controllerId, {$scope: scope, kernel: kernel});
+        var cmDeferred = $q.defer();
+        var cmPromise = cmDeferred.promise;
+        var context = {};
+        scope.context = context;
+
         kernel.execute(code)
           .then(function(result){
             return controller.start();
+          })
+          .then(function(){
+            scope.goToFrame(0);
           });
         //controller.start(code);
         scope.goToFrame = function(index) {
-          scope.currentFrame = index;
-          $timeout(scope.refreshLocals, 100);
+          controller.goToFrame(index)
+            .then(function(){
+              // refresh the locals watcher
+              context.refreshLocals();
+              // Wait for codemirror source to update... I'm sure there's an event in codemirror that I can listen
+              // for and then resolve after the change, but 50ms seems to work for now.
+              return $timeout(_.noop, 50);
+            })
+            .then(function(){
+              scrollToCurrent();
+            });
         };
         // controller.start(code);
 
-        scope.$watch('debuggerStarted', function(started){
+        var onCodeMirrorLoad = function(instance) {
+          cmDeferred.resolve(instance);
+        };
+
+        scope.cmOptions = {
+          mode: language,
+          lineNumbers: true,
+          readOnly: true,
+          onLoad: onCodeMirrorLoad
+        };
+
+        var highlightedLine = null;
+        var scrollToCurrent = function(){
+          cmPromise
+            .then(function(cm){
+              var d = scope.debugger;
+              var line = d.stack[d.currentFrame].lineNumber - 1;
+              var height = cm.getScrollInfo().clientHeight;
+              var coords = cm.charCoords({line: line, ch: 0}, "local");
+              var scrollPos = (coords.top + coords.bottom - height) / 2;
+              if(highlightedLine) cm.removeLineClass(highlightedLine, 'background', null);
+              cm.addLineClass(line, 'background', 'debugger-highlight');
+              highlightedLine = line;
+              cm.scrollTo(null, scrollPos);
+            })
+        };
+
+        scope.$watch('debugger.started', function(started){
           if(started) ipyDebugPatch.patchKernel(kernel.id, controller);
-          else ipyDebugPatch.unpatchKernel(kernel.id);
+          else {
+            ipyDebugPatch.unpatchKernel(kernel.id);
+            cmDeferred = $q.defer();
+            cmPromise = cmDeferred.promise;
+          }
         });
 
         scope.$on('$destroy', function(){
