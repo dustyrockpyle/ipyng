@@ -97,7 +97,7 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
               cm.addLineClass(line, 'background', 'debugger-highlight');
               highlightedLine = line;
               cm.scrollTo(null, scrollPos);
-            })
+            });
         };
 
         scope.$watch('debugger.started', function(started){

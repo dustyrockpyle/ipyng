@@ -163,7 +163,7 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
           if(content.status == 'error'){
             _.assign(result, content);
             latestDeferred.reject(result);
-            return
+            return;
           }
           if(result.data) result.text = result.data['text/plain'];
           result.isRequest = false;

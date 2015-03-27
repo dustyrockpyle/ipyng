@@ -23,6 +23,13 @@ angular.module('test.routes', ['ui.router', 'ipyng'])
             '  def _repr_html_(self):\n' +
             '    return "<psutil></psutil>"\n' +
             'TestWidget()';
+
+          $scope.cellception = '' +
+            'class CodecellCeption:\n' +
+            '  def _repr_html_(self):\n' +
+            '    return "<codecell></codecell>"\n' +
+            'CodecellCeption()';
+
           $scope.image = '' +
             '%matplotlib inline\n' +
             'from matplotlib import pyplot as plt\n' +

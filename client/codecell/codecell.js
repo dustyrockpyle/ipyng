@@ -16,7 +16,10 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.resu
           scope.result = null;
           scope.error = null;
           scope.executionCount = '*';
-          kernel.execute(scope.input, function(stdout) { scope.stream += stdout; })
+          var stdoutHandler = function(stream) {
+            scope.stream += stream;
+          };
+          kernel.execute(scope.input, stdoutHandler)
             .then(function (result) {
               scope.result = result;
               scope.success = true;
@@ -26,7 +29,7 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.resu
               scope.error = error;
               scope.status = false;
               scope.executionCount = error.execution_count;
-            })
+            });
         };
       }
     };
