@@ -29,7 +29,7 @@ python with IPython 3. Clone the repo, cd to ipyng/gulp, cross your fingers, and
 Gulp watch will start a livereload server on port 9000, watch for changes and rebuild the app as necessary,
 run a karma test server, and then crash when you add a new subdirectory (I'm still working on that bit...).
 
-To start the python server cd to ipyng/python and run:
+To start the python server cd to ipyng/server and run:
 - python webapp.py
 
 This will start a tornado server on localhost:8000 serving the test application.
