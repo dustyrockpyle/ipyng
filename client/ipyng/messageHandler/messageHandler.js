@@ -162,13 +162,14 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
       return ipyMessage.makeMessage('execute_request', content);
     };
 
-    ipyMessage.makeExecuteReply = function(status, executionCount, userExpressions, payload, parentHeader){
+    ipyMessage.makeExecuteReply = function(status, executionCount, userExpressions, payload, parentHeader, traceback){
       var content = {
         status: status,
         execution_count: executionCount,
         user_expressions: userExpressions,
         payload: payload
       };
+      if(traceback) content.traceback = traceback;
       return ipyMessage.makeMessage('execute_reply', content, parentHeader);
     };
 

@@ -11,11 +11,18 @@ angular.module('test.routes', ['ui.router', 'ipyng'])
           }
         },
         controller: function($scope, kernel) {
+          $scope.exception = '' +
+            'def error_func(x, y, z):\n' +
+            '  if (x == 3):\n' +
+            '    raise ValueError(x,y,z)\n' +
+            '  return error_func(x+1, y+2, z+3)\n' +
+            'error_func(1,2,3)';
+
           $scope.widget = '' +
-            'class Test(object):\n' +
+            'class TestWidget:\n' +
             '  def _repr_html_(self):\n' +
             '    return "<psutil></psutil>"\n' +
-            'Test()';
+            'TestWidget()';
           $scope.image = '' +
             '%matplotlib inline\n' +
             'from matplotlib import pyplot as plt\n' +

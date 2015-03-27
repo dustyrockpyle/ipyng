@@ -177,11 +177,11 @@ describe("ipyKernel", function () {
         var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
         ipyMessageHandler.resolve(response);
 
-        var out = {'text/plain': 'the output'};
+        var out = {data: {'text/plain': 'the output'}};
         var outMessage = ipyMessage.makeExecuteResult(out, 1, {}, sentHeader);
         ipyMessageHandler.iopubHandler(outMessage);
 
-        var display = {'image/png': 'arbitrarypng'};
+        var display = {data: {'image/png': 'arbitrarypng'}};
         var displayMessage = ipyMessage.makeIopubDisplay(display, sentHeader);
         ipyMessageHandler.iopubHandler(displayMessage);
         $rootScope.$apply();
@@ -236,6 +236,19 @@ describe("ipyKernel", function () {
           ipyMessageHandler.resolve(ipyMessage.makeExecuteReply('ok', 1, []));
           $rootScope.$apply();
           expect(thirdResult.text).toEqual(executeResult);
+        }));
+
+      it("should reject the promise when the status of the message is error",
+        inject(function(ipyMessageHandler){
+          var executeError = null;
+          var traceback = ['line1', 'line2'];
+          promise.catch(function(error){
+            executeError = error;
+          });
+          var response = ipyMessage.makeExecuteReply('error', 1, {}, [], null, traceback);
+          ipyMessageHandler.resolve(response);
+          $rootScope.$apply();
+          expect(executeError.traceback).toEqual(traceback);
         }));
 
       it("should pass appropriate options to the execute request",

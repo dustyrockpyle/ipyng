@@ -1,5 +1,5 @@
 angular.module('ipy.result-area', ['ipyng', 'templates', 'ng.lodash'])
-  .directive('resultArea', function () {
+  .directive('resultArea', function (ipyUtils) {
     return {
       templateUrl: 'result-area.tpl.html',
       restrict: 'E',
@@ -10,7 +10,15 @@ angular.module('ipy.result-area', ['ipyng', 'templates', 'ng.lodash'])
         var div = element[0];
         scope.type = null;
         scope.$watch('result', function(result){
-          if(!result || !result.data) return;
+          console.log(result);
+          if(!result) return;
+          if(result.status == 'error'){
+            scope.type = 'error';
+            var s = result.traceback.join('\n');
+            scope.error = ipyUtils.fixConsole(s);
+            return;
+          }
+          if(!result.data) return;
           if(result.data['text/html']){
             scope.type = 'html';
             scope.html = result.data['text/html'];

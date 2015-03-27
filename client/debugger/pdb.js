@@ -30,6 +30,10 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
       d.starting = true;
       var deferred = $q.defer();
       promise = kernel.executeStdinSilent(statement, stdoutHandler)
+        .catch(function(error){
+          deferred.reject(error);
+          return $q.reject(error);
+        })
         .then(function(response){
           d.started = true;
           d.starting = false;

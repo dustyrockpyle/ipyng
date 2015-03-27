@@ -46,15 +46,18 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
         var cmPromise = cmDeferred.promise;
         var context = {};
         scope.context = context;
+        context.error = null;
 
-        kernel.execute(code)
-          .then(function(result){
-            return controller.start();
+        controller.start()
+          .catch(function(error){
+            context.error = error;
+            return $q.reject(error);
           })
           .then(function(){
+            console.log('this happened');
+            context.error = null;
             scope.goToFrame(0);
           });
-        //controller.start(code);
         scope.goToFrame = function(index) {
           controller.goToFrame(index)
             .then(function(){

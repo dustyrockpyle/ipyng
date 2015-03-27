@@ -128,11 +128,9 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         }
         else if (type == 'execute_result') {
           _.assign(result, content);
-          _.assign(result, content.data);
         }
         else if (type == 'display_data') {
           _.assign(result, content);
-          _.assign(result, content.data);
         }
       };
 
@@ -162,7 +160,12 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         })
         .then(function (response) {
           var content = ipyMessage.getContent(response);
-          result.text = result['text/plain'];
+          if(content.status == 'error'){
+            _.assign(result, content);
+            latestDeferred.reject(result);
+            return
+          }
+          if(result.data) result.text = result.data['text/plain'];
           result.isRequest = false;
           latestDeferred.resolve(result);
         });

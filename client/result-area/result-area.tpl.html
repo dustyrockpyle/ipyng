@@ -2,4 +2,7 @@
     <div ng-switch-when="text" class="text" ng-bind="text"></div>
     <img ng-switch-when="image" class="image" ng-src="{{imgSrc}}" resizable>
     <compile-html ng-switch-when="html" class="html" html="html"></compile-html>
+    <pre ng-switch-when="error" class="error">
+        <compile-html html="error"></compile-html>
+    </pre>
 </div>
