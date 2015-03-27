@@ -124,9 +124,54 @@ var errorPlumber = function(){
 };
 
 
-gulp.task('watch', function () {
-  makeConfig();
+makeConfig();
 
+gulp.task('templates', function(){
+  if(config.templates === undefined) return;
+  return gulp.src(config.templates.src)
+    .pipe(build_templates(config.templates)())
+});
+
+gulp.task('html', ['templates', 'less'], function(){
+  if(config.html === undefined) return;
+  return gulp.src(config.html.src)
+    .pipe(build_html(config.html)());
+});
+
+gulp.task('less', function(){
+  if(config.less === undefined) return;
+  return gulp.src(config.less.src)
+    .pipe(build_less(config.less)());
+});
+
+gulp.task('lint', function(){
+  if(config.lint === undefined) return;
+  return gulp.src(config.lint.src)
+    .pipe(lint());
+});
+
+gulp.task('karma', function(){
+  if(config.karma === undefined) return;
+  config.karma.singleRun = true;
+  return spawn('node', [path.join(__dirname, 'karmaBackground.js'), JSON.stringify(config.karma)],
+    {stdio: 'inherit'});
+});
+
+gulp.task('copy', function(){
+  if(config.copy === undefined) return;
+  _([config.copy.src, config.copy.dest])
+    .zip()
+    .map(function(obj){
+      console.log(obj[0]);
+      console.log(obj[1]);
+      gulp.src(obj[0])
+        .pipe(gulp.dest(obj[1]))
+    });
+});
+
+gulp.task('build', ['templates', 'less', 'html', 'lint', 'copy', 'karma']);
+
+gulp.task('watch', ['templates', 'less', 'html', 'copy', 'lint'], function () {
   if(config.server !== undefined) {
     connect.server({
       root: config.server.root,
@@ -144,12 +189,13 @@ gulp.task('watch', function () {
   }
 
   var watches = [];
-  var addWatch = function (arg1, arg2, arg3) {
-    watches.push(gulp.src(arg1).pipe(watch(arg1, arg2, arg2)));
+  var addWatch = function (src) {
+    watches.push(watch(src));
     return watches[watches.length - 1];
   };
-  var addBatchWatch = function(arg1, arg2, arg3) {
-    watches.push(gulp.src(arg1).pipe(watch(arg1, batch(arg2))));
+
+  var addBatchWatch = function(src, cb) {
+    watches.push(watch(src, batch(cb)));
     return watches[watches.length -1];
   };
 
