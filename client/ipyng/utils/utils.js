@@ -1,6 +1,5 @@
 angular.module('ipyng.utils', [])
   .factory('ipyUtils', function () {
-
     var url_path_join = function () {
       // join a sequence of url components with '/'
       var url = '';
@@ -58,4 +57,20 @@ angular.module('ipyng.utils', [])
       from_absolute_cursor_pos : from_absolute_cursor_pos
     };
   })
-;
+  .directive('resizable', function($timeout){
+    return {
+      replace: true,
+      restrict: 'A',
+      link: function (scope, element) {
+        // Resizable options. Should make this configurable.
+        var options = {
+          autoHide: true,
+          aspectRatio: true
+        };
+        // wait 50 ms before applying resize so the element gets its original size
+        $timeout(function(){
+          element.resizable(options);
+        }, 50);
+      }
+    };
+  });

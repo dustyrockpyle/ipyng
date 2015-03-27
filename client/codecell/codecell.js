@@ -1,4 +1,4 @@
-angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror'])
+angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.result-area'])
   .directive('codecell', function (ipyKernel) {
     return {
       templateUrl: 'codecell.tpl.html',
@@ -7,7 +7,7 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror'])
       scope: {
         execute: '=?',
         input: '=?',
-        output: '=?'
+        result: '=?'
       },
       link: function (scope, element, attrs, kernel) {
         scope.stream = '';
@@ -17,7 +17,7 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror'])
           scope.executionCount = '*';
           kernel.execute(scope.input, function(stdout) { scope.stream += stdout; })
             .then(function (result) {
-              scope.output = result.text;
+              scope.result = result;
               scope.executionCount = result.execution_count;
             });
         };

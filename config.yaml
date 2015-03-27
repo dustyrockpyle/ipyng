@@ -17,6 +17,8 @@ server:
 
 vendor_scripts: &vendor_scripts !prepend
     - *vendor
+    - jquery/dist/jquery.js
+    - jquery-ui/jquery-ui.js
     - angular/angular.js
     - angular-ui-router/release/angular-ui-router.js
     - lodash/lodash.js
@@ -24,6 +26,7 @@ vendor_scripts: &vendor_scripts !prepend
     - codemirror/lib/codemirror.js
     - codemirror/mode/python/python.js
     - angular-ui-codemirror/ui-codemirror.js
+    - ui-utils/ui-utils.js
 
 templates_dest: &templates_dest !join [*build, test/templates.js]
 
@@ -49,6 +52,7 @@ html:
         - *vendor_scripts
         - *client_scripts
         - !join [*vendor, codemirror/lib/codemirror.css]
+        - !join [*vendor, jquery-ui/themes/smoothness/jquery-ui.css]
         - *css_dest
     watch: !flatten
         - *client_scripts

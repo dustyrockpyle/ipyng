@@ -1,3 +1,4 @@
+<button class="btn btn-primary" ng-click="execute()">Execute <span class="glyphicon glyphicon-play"></span></button>
 <div class="codecell">
     <div class="input">
         <div class="prompt">In [{{ executionCount||' ' }}]:</div>
@@ -5,7 +6,7 @@
             <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="input"></ui-codemirror>
         </div>
     </div>
-    <div class="output" ng-show="stream.length || output">
+    <div class="output" ng-show="stream.length || result">
         <div class="prompt prompt-overlay"></div>
         <div class="display-area">
             <div class="stream" ng-show="stream">
@@ -14,11 +15,10 @@
                     <pre class="result">{{ stream }}</pre>
                 </div>
             </div>
-            <div class="pyout display-line" ng-show="output">
+            <div class="pyout display-line" ng-show="result.data">
                 <div class="prompt">Out[{{ executionCount||' ' }}]:</div>
-                <pre class="result">{{ output }}</pre>
+                <result-area result="result" class="result"></result-area>
             </div>
         </div>
     </div>
 </div>
-<button class="btn btn-primary" ng-click="execute()">Execute</button>
