@@ -22,12 +22,10 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.resu
           kernel.execute(scope.input, stdoutHandler)
             .then(function (result) {
               scope.result = result;
-              scope.success = true;
               scope.executionCount = result.execution_count;
             })
             .catch(function(error){
               scope.error = error;
-              scope.status = false;
               scope.executionCount = error.execution_count;
             });
         };
