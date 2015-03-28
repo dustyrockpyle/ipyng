@@ -54,7 +54,6 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
             return $q.reject(error);
           })
           .then(function(){
-            console.log('this happened');
             context.error = null;
             scope.goToFrame(0);
           });

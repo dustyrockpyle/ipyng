@@ -1,9 +1,9 @@
-<button class="btn btn-primary" ng-click="execute()">Run <span class="glyphicon glyphicon-play"></span></button>
 <div class="codecell">
     <div class="input">
         <div class="prompt">In [{{ executionCount||' ' }}]:</div>
         <div class="code-area">
-            <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="input"></ui-codemirror>
+            <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="input"
+                           ui-keypress="{'shift-enter': 'execute($event)'}"></ui-codemirror>
         </div>
     </div>
     <div class="output" ng-show="stream.length || result || error">

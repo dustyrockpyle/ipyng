@@ -10,7 +10,6 @@ angular.module('ipy.result-area', ['ipyng', 'templates', 'ng.lodash'])
         var div = element[0];
         scope.type = null;
         scope.$watch('result', function(result){
-          console.log(result);
           if(!result) return;
           if(result.status == 'error'){
             scope.type = 'error';
