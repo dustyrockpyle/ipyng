@@ -126,38 +126,48 @@ var errorPlumber = function(){
 
 makeConfig();
 
-gulp.task('templates', function(){
+gulp.task('config', function(){
+  try{
+    makeConfig();
+  } catch(err) {
+    console.log("Error while generating gulp configuration.");
+    console.log(err);
+    config = {};
+  }
+});
+
+gulp.task('templates', ['config'], function(){
   if(config.templates === undefined) return;
   return gulp.src(config.templates.src)
     .pipe(build_templates(config.templates)())
 });
 
-gulp.task('html', ['templates', 'less'], function(){
+gulp.task('html', ['config', 'templates', 'less'], function(){
   if(config.html === undefined) return;
   return gulp.src(config.html.src)
     .pipe(build_html(config.html)());
 });
 
-gulp.task('less', function(){
+gulp.task('less', ['config'], function(){
   if(config.less === undefined) return;
   return gulp.src(config.less.src)
     .pipe(build_less(config.less)());
 });
 
-gulp.task('lint', function(){
+gulp.task('lint', ['config'], function(){
   if(config.lint === undefined) return;
   return gulp.src(config.lint.src)
     .pipe(lint());
 });
 
-gulp.task('karma', function(){
+gulp.task('karma', ['config'], function(){
   if(config.karma === undefined) return;
   config.karma.singleRun = true;
   return spawn('node', [path.join(__dirname, 'karmaBackground.js'), JSON.stringify(config.karma)],
     {stdio: 'inherit'});
 });
 
-gulp.task('copy', function(){
+gulp.task('copy', ['config'], function(){
   if(config.copy === undefined) return;
   _([config.copy.src, config.copy.dest])
     .zip()
@@ -171,7 +181,9 @@ gulp.task('copy', function(){
 
 gulp.task('build', ['templates', 'less', 'html', 'lint', 'copy', 'karma']);
 
-gulp.task('watch', ['templates', 'less', 'html', 'copy', 'lint'], function () {
+gulp.task('prewatch', ['templates', 'less', 'html', 'copy', 'lint']);
+
+gulp.task('watch', ['prewatch'], function () {
   if(config.server !== undefined) {
     connect.server({
       root: config.server.root,
@@ -199,6 +211,8 @@ gulp.task('watch', ['templates', 'less', 'html', 'copy', 'lint'], function () {
     return watches[watches.length -1];
   };
 
+  gulp.watch(whichConfig, ['prewatch']);
+
   gulp.src(whichConfig)
     .pipe(watch(whichConfig, function (file) {
       if(file.isNull()) return;
@@ -212,9 +226,8 @@ gulp.task('watch', ['templates', 'less', 'html', 'copy', 'lint'], function () {
         console.log('Making config, reloading watches.');
         makeConfig();
       } catch (err) {
-        console.log("Error while generating gulp configuration.");
-        console.log(err);
-        this.emit('end');
+        console.log('Configuration error.');
+        config = {};
       }
 
       if (config.lint !== undefined && config.lint.watch !== undefined) {
