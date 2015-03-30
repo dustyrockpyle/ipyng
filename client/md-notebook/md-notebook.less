@@ -1,4 +1,26 @@
 .md-notebook{
-  margin: 10px;
+  margin: 10px auto auto;
   box-shadow: 0 2px 5px 0 rgba(0,0,0, .26);
+  @media (min-width: 768px){
+    width: 768px;
+  }
+  @media (min-width: 992px){
+    width: 940px;
+  }
+  @media (min-width: 1200px){
+    width: 1140px;
+  }
+  .selected{
+    md-whiteframe {
+      box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);
+      transform: scale(1);
+    }
+    .CodeMirror.cm-s-default.CodeMirror-focused{
+      box-shadow: 0 0 1pt 1pt green;
+    }
+  }
+  md-whiteframe {
+    transform: scale(.95);
+    transition: all linear .2s;
+  }
 }

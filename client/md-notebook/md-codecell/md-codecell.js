@@ -1,5 +1,5 @@
-angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.output-area', 'ui.utils', 'ngMaterial', 'ui.bootstrap'])
-  .directive('mdCodecell', function () {
+angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.output-area', 'ui.utils', 'ngMaterial', 'ui.bootstrap', 'ng.lodash'])
+  .directive('mdCodecell', function (_, $q, $timeout) {
     return {
       templateUrl: 'md-codecell.tpl.html',
       restrict: 'E',
@@ -7,7 +7,7 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
       scope: {
         cell: '=?',
         execute: '=?',
-        selected: '=?'
+        cmPromise: '=?'
       },
       link: function (scope, element, attrs, kernel) {
         if(!scope.cell) scope.cell = {};
@@ -18,14 +18,32 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
         cell.outputs = cell.outputs || [];
         cell.source = cell.source || '';
         scope.outputs = cell.outputs;
+
+        // Insert a 0ms delay to load codemirror, otherwise codemirror options don't register correctly
+        scope.delay = false;
+        $timeout(function(){
+          scope.delay = true;
+        });
+
+        var cmDeferred = $q.defer();
+        scope.cmPromise = cmDeferred.promise;
+        var onCodeMirrorLoad = function(cmInstance){
+          cmDeferred.resolve(cmInstance);
+        };
+        scope.cmOptions = {
+          mode: kernel.language_info.name,
+          onLoad: onCodeMirrorLoad,
+          scrollbarStyle: null
+        };
+
         scope.execute = function ($event) {
           if($event) $event.preventDefault();
-          var cell = scope.cell;
-          cell.outputs = [];
+          scope.cell.outputs = [];
+          var outputs = scope.cell.outputs;
           cell.execution_count = '*';
           var stdoutHandler = function(stream) {
-            scope.outputs = cell.outputs;
-            cell.outputs.push({
+            scope.outputs = outputs;
+            outputs.push({
               name: 'stdout',
               output_type: 'stream',
               text: stream
@@ -34,13 +52,13 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
           kernel.execute(cell.source, stdoutHandler)
             .then(function (result) {
               cell.execution_count = result.execution_count;
-              if(result.data) cell.outputs.push(result);
-              scope.outputs = cell.outputs;
+              if(result.data) outputs.push(result);
+              scope.outputs = outputs;
             })
             .catch(function(error){
-              cell.outputs.push(error);
+              outputs.push(error);
               cell.execution_count = error.execution_count;
-              scope.outputs = cell.outputs;
+              scope.outputs = outputs;
             });
         };
       }

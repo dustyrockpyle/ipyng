@@ -20,7 +20,7 @@ angular.module('ipy.output-area', ['ipyng', 'templates', 'ng.lodash'])
           if(output.output_type == 'stream'){
             scope.type = 'text';
             scope.text = output.text;
-            return
+            return;
           }
           if(!output.data) return;
           if(output.data['text/html']){

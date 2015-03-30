@@ -1,5 +1,5 @@
-angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial'])
- .directive('mdNotebook', function(){
+angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'])
+  .directive('mdNotebook', function(_, $timeout){
     return {
       templateUrl: 'md-notebook.tpl.html',
       restrict: 'E',
@@ -10,27 +10,54 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial'])
         selected: '=?'
       },
       link: function (scope, element, attrs, kernel) {
-        scope.selected = 0;
+        // Timeout before selecting cell to ensure cell exists;
+        $timeout(function(){
+          scope.commands.selectCell(0);
+        });
+        scope.cmPromises = {};
         if(!scope.commands) {
           scope.commands = {};
         }
         var commands = scope.commands;
+        scope.execute = {};
+
+        element.bind('keypress keydown', function(event){
+          if(event.shiftKey && event.charCode == 13){
+            scope.execute[scope.selected]();
+            event.preventDefault();
+            commands.selectCell(scope.selected + 1);
+            commands.focus();
+          }
+        });
+
+        var newCell = function(){
+          return {guid: _.uniqueId()};
+        };
 
         commands.insert = function(){
           if(!scope.selected) {
-            scope.notebook.cells.push({});
+            scope.notebook.cells.push(newCell());
+          }
+          else{
+            scope.notebook.cells.splice(scope.selected + 1, 0, newCell());
           }
         };
 
-        commands.cut = function(){
-
-        };
-
-        commands.paste = function(){
-
+        commands.focus = function(){
+          // In case the cell was just created, insert a timeout
+          // before focusing to ensure the new cell is created
+          $timeout(function(){
+            scope.cmPromises[scope.selected]
+              .then(function(cm){
+                cm.focus();
+              });
+          })
         };
 
         commands.selectCell = function(index) {
+          if(index == scope.notebook.cells.length){
+            commands.insert();
+          }
           scope.selected = index;
         };
 
@@ -43,34 +70,10 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial'])
             nbformat: 4,
             nbformat_minor: 0
           };
-          commands.insert();
-          commands.insert();
-          commands.insert();
         }
 
-        //_.forEach(scope.notebook.cells, function(cell){
-        //  cell.selected = false;
-        //});
-
-
-        scope.$watch(function(){
-          return scope.notebook.cells[1].execution_count;
-        }, function(output){
-          //commands.selectCell(selected + 1);
-          scope.selected += 1;
-        });
-      }
-    };
-  })
-  .directive('slide', function(){
-    return {
-      restrict: 'A',
-      link: function (scope, element, attrs, kernel) {
-        var getHeight = function(){
-          return element.height();
-        };
-        scope.$watch(getHeight, function(height){
-          console.log(height);
+        _.forEach(scope.notebook.cells, function(cell){
+          cell.guid = _.uniqueId();
         });
       }
     };
