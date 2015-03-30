@@ -1,6 +1,6 @@
 <div class="codecell">
     <div class="input">
-        <div class="prompt">In [{{ executionCount||' ' }}]:</div>
+        <div class="prompt">In [{{ execution_count||' ' }}]:</div>
         <div class="code-area">
             <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="input"
                            ui-keypress="{'shift-enter': 'execute($event)'}"></ui-codemirror>
@@ -17,11 +17,11 @@
             </div>
             <div class="pyout display-line" ng-show="error">
                 <div class="prompt"></div>
-                <result-area result="error" class="result"></result-area>
+                <output-area output="error" class="result"></output-area>
             </div>
             <div class="pyout display-line" ng-show="result.data">
-                <div class="prompt">Out[{{ executionCount||' ' }}]:</div>
-                <result-area result="result" class="result"></result-area>
+                <div class="prompt">Out[{{ execution_count||' ' }}]:</div>
+                <output-area output="result" class="result"></output-area>
             </div>
         </div>
     </div>

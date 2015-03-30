@@ -6,7 +6,7 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
     return '';
   })
   .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils,
-                                          ipySessionId, $location, $q, _, $timeout) {
+                                          ipySessionId, $location, $q, _, $timeout, $rootScope) {
     var ipyMessageHandler = {};
 
     ipyMessageHandler.channelUrl = function (kernelGuid) {
@@ -58,7 +58,9 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
 
     ipyMessageHandler.handleIopubMessage = function (message) {
       var parentId = ipyMessage.getParentMessageID(message);
-      shellHandlers[parentId].iopubHandler(message);
+      $rootScope.$apply(function(){
+        shellHandlers[parentId].iopubHandler(message);
+      });
       if(ipyMessage.getMessageType(message) == 'status' && ipyMessage.getContent(message).execution_state == 'idle' ) {
         shellHandlers[parentId].idle.resolve();
       }

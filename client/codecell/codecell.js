@@ -1,12 +1,12 @@
-angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.result-area', 'ui.utils'])
+angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.output-area', 'ui.utils'])
   .directive('codecell', function (ipyKernel) {
     return {
       templateUrl: 'codecell.tpl.html',
       restrict: 'E',
       require: '^kernel',
       scope: {
-        execute: '=?',
         input: '=?',
+        execute: '=?',
         result: '=?'
       },
       link: function (scope, element, attrs, kernel) {
@@ -14,20 +14,18 @@ angular.module('ipy.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.resu
         scope.execute = function ($event) {
           if($event) $event.preventDefault();
           scope.stream = '';
-          scope.result = null;
-          scope.error = null;
-          scope.executionCount = '*';
+          scope.execution_count = '*';
           var stdoutHandler = function(stream) {
             scope.stream += stream;
           };
           kernel.execute(scope.input, stdoutHandler)
             .then(function (result) {
+              scope.execution_count = result.execution_count;
               scope.result = result;
-              scope.executionCount = result.execution_count;
             })
             .catch(function(error){
+              scope.execution_count = error.execution_count;
               scope.error = error;
-              scope.executionCount = error.execution_count;
             });
         };
       }

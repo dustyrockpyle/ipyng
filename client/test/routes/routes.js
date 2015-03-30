@@ -47,5 +47,17 @@ angular.module('test.routes', ['ui.router', 'ipyng'])
         controller: function(kernel){
 
         }
+      })
+      .state('notebook', {
+        url: '/notebook',
+        templateUrl: 'test-notebook.tpl.html',
+        resolve: {
+          kernel: function(ipyKernel) {
+            return ipyKernel.getOrStartKernel('test', 'python');
+          }
+        },
+        controller: function(kernel){
+
+        }
       });
   });

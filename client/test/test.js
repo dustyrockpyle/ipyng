@@ -2,10 +2,11 @@ angular.module('test', [
   'ipyng',
   'templates',
   'ng.lodash',
-  'ipy.codecell',
+  'md.notebook',
   'ipy.psutil',
   'ipy.watch',
   'ipy.debugger',
+  'ipy.codecell',
   'test.routes'
 ])
   .config(function($provide){

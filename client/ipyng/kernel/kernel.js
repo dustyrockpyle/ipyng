@@ -160,8 +160,8 @@ angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils']).
         })
         .then(function (response) {
           var content = ipyMessage.getContent(response);
+          _.assign(result, content);
           if(content.status == 'error'){
-            _.assign(result, content);
             latestDeferred.reject(result);
             return;
           }

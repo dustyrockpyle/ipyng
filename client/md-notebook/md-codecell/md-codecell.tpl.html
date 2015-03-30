@@ -1,0 +1,23 @@
+<md-whiteframe class="md-codecell"
+               ng-class="{'md-whiteframe-z1': !selected, 'md-whiteframe-z2': selected}" layout="column">
+    <div class="input" layout="row">
+        <div class="prompt">In [{{ cell.execution_count||' ' }}]:</div>
+        <div class="code-area" flex>
+            <ui-codemirror ui-codemirror-opts="{mode: 'python'}" ng-model="cell.source"
+                           ui-keypress="{'shift-enter': 'execute($event)'}"></ui-codemirror>
+        </div>
+    </div>
+    <md-content class="output-container" collapse="!cell.outputs.length">
+        <md-divider class="divider"></md-divider>
+        <div class="output" layout="row" layout-align="start end">
+            <div class="display-area" layout="column">
+                <div class="display-line" ng-repeat="output in outputs track by $index" layout="row">
+                    <div class="prompt">
+                        <div ng-if="output.data">Out[{{ cell.execution_count || ' '}}]:</div>
+                    </div>
+                    <output-area output="output"></output-area>
+                </div>
+            </div>
+        </div>
+    </md-content>
+</md-whiteframe>

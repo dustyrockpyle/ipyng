@@ -1,0 +1,94 @@
+@kw-color: #008000;
+@codecell-line-height: 1.21429em;
+
+.md-codecell-font {
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.md-codecell {
+  padding: 5px;
+  margin: 20px;
+
+  .md-codecell-font;
+  pre {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    display: block;
+    word-break: break-all;
+    .md-codecell-font;
+  }
+
+  .prompt {
+    min-width: 11ex;
+    padding-right: .4em;
+    text-align: right;
+  }
+
+  .input, .output {
+    margin: 10px;
+  }
+
+  .input {
+    .prompt {
+      padding-top: 5px;
+      color: navy;
+    }
+  }
+
+  .output {
+    .prompt {
+      color: darkred;
+    }
+    .display-area {
+      pre{
+        background: none;
+      }
+    }
+  }
+
+  // animations
+
+  // shadow animation
+  transition: all linear .3s;
+
+  // Custom syntax highlighting:
+  .input{
+    .cm-keyword {
+      color: @kw-color;
+      font-weight: bold;
+    }
+    .cm-operator {
+      color: #AA22FF;
+      font-weight: bold;
+    }
+    .cm-string {
+      color: #BA2121;
+    }
+    .cm-number {
+      color: @kw-color;
+    }
+    .cm-comment {
+      color: #408080;
+      font-style: italic;
+    }
+    .cm-builtin {
+      color: @kw-color;
+    }
+    .CodeMirror {
+      &.cm-s-default {
+        border: 1px solid #cfcfcf;
+        background: #f7f7f7;
+        border-radius: 2px;
+        line-height: @codecell-line-height;
+        height: auto;
+      }
+    }
+    .CodeMirror-lines {
+      padding: 0.4em;
+      min-height: 28px;
+    }
+  }
+}

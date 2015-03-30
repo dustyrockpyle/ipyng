@@ -1,0 +1,7 @@
+<md-content class="md-notebook md-padding md-default-theme">
+    <md-list ng-repeat="cell in notebook.cells track by $index">
+        <md-item ng-click="commands.selectCell($index)">
+            <md-codecell cell="cell" selected="$index === selected"></md-codecell>
+        </md-item>
+    </md-list>
+</md-content>
