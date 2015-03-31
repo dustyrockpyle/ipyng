@@ -20,7 +20,7 @@
     //&.ng-move,
     &.ng-enter,
     &.ng-leave {
-      transition: all linear .2s;
+      transition: all linear .3s;
     }
 
     &.ng-leave.ng-leave-active,
@@ -28,9 +28,9 @@
     &.ng-enter{
       .md-codecell {
         overflow-y: hidden;
-        transition: all linear .2s;
+        transition: all linear .3s;
         max-height: 0;
-        //transform: scale(0);
+        transform: scale(.95);
         box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
       }
     }
@@ -38,8 +38,8 @@
     //&.ng-move.ng-move-active,
     &.ng-enter.ng-enter-active{
       .md-codecell {
-        transition: all linear .2s;
-        //transform: scale(1.00);
+        transition: all linear .3s;
+        transform: scale(1.00);
         max-height: 200px;
         box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);
       }
