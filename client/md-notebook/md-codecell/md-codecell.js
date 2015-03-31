@@ -6,8 +6,7 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
       require: '^kernel',
       scope: {
         cell: '=?',
-        execute: '=?',
-        cmPromise: '=?'
+        onLoad: '&?'
       },
       link: function (scope, element, attrs, kernel) {
         if(!scope.cell) scope.cell = {};
@@ -25,20 +24,18 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
           scope.delay = true;
         });
 
-        var cmDeferred = $q.defer();
-        scope.cmPromise = cmDeferred.promise;
         var onCodeMirrorLoad = function(cmInstance){
-          cmDeferred.resolve(cmInstance);
+          if(scope.onLoad) scope.onLoad({cmInstance: cmInstance, execute: execute});
         };
+
         scope.cmOptions = {
           mode: kernel.language_info.name,
           onLoad: onCodeMirrorLoad,
           scrollbarStyle: null
         };
 
-        scope.execute = function ($event) {
-          if($event) $event.preventDefault();
-          scope.cell.outputs = [];
+        function execute () {
+          cell.outputs = [];
           var outputs = scope.cell.outputs;
           cell.execution_count = '*';
           var stdoutHandler = function(stream) {
@@ -49,6 +46,7 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
               text: stream
             });
           };
+
           kernel.execute(cell.source, stdoutHandler)
             .then(function (result) {
               cell.execution_count = result.execution_count;
@@ -60,7 +58,7 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
               cell.execution_count = error.execution_count;
               scope.outputs = outputs;
             });
-        };
+        }
       }
     };
   })

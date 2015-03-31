@@ -34,11 +34,6 @@ angular.module('ipy.debugger', ['ipyng', 'ng.lodash', 'ui.codemirror', 'ipy.pdb'
       require: '^kernel',
       $scope: {},
       link: function (scope, element, attrs, kernel) {
-        var code = "def f(x):\n" +
-          "    if x == 5:\n" +
-          "        raise ValueError(5)\n" +
-          "    return f(x+1)\n" +
-          "f(1)";
         var language = kernel.language_info.name;
         var controllerId = debugControllers[language];
         var controller = $controller(controllerId, {$scope: scope, kernel: kernel});

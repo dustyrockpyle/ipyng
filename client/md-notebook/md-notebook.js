@@ -10,62 +10,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
         selected: '=?'
       },
       link: function (scope, element, attrs, kernel) {
-        scope.cmPromises = {};
-        if(!scope.commands) {
-          scope.commands = {};
-        }
-        var commands = scope.commands;
-        scope.execute = {};
-        var cmInstances = [];
-
-        var newCell = function(){
-          return {guid: _.uniqueId()};
-        };
-
-        commands.insertAbove = function(){
-          var index = scope.selected;
-          if(index === undefined) index = 0;
-          commands.insert(index);
-        };
-
-        commands.insertBelow = function(){
-          if(scope.selected === undefined) commands.insert(0);
-          else commands.insert(scope.selected + 1);
-        };
-
-        commands.insert = function(index){
-          scope.notebook.cells.splice(index, 0, newCell());
-          loadCodeMirrors();
-        };
-
-        commands.editMode = function(){
-          $timeout(function(){
-            getCodeMirror(scope.selected)
-              .then(function(cm){
-                cm.focus();
-              });
-          });
-        };
-
-        commands.commandMode = function(){
-          $timeout(function(){
-            getCodeMirror(scope.selected)
-              .then(function(cm){
-                cm.getInputField().blur();
-                element.find('md-content')[0].focus();
-              });
-          });
-        };
-
-        commands.selectCell = function(index) {
-          if(index == scope.notebook.cells.length){
-            commands.insertBelow();
-          }
-          scope.selected = index;
-        };
-
         ///// initialize notebook state
-
         // default notebook if not provided
         if(!scope.notebook) {
           scope.notebook = {
@@ -77,57 +22,140 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
             nbformat_minor: 0
           };
         }
+        var cells = scope.notebook.cells;
 
         // Setup a guid for each cell
-        _.forEach(scope.notebook.cells, function(cell){
+        _.forEach(cells, function(cell){
           cell.guid = _.uniqueId();
         });
 
-        // select the first cell
+        scope.onCellLoad = function(index, cmInstance, execute){
+          cells[index].cmInstance = cmInstance;
+          cells[index].execute = execute;
+          if(insertDeferred) insertDeferred.resolve(null);
+        };
+
+        // Commands exposed for consumers of this directive
+        if(!scope.commands) {
+          scope.commands = {};
+        }
+        var commands = scope.commands;
+
+        // Create commands
+        commands.insertAbove = function(){
+          var index = scope.selected;
+          if(index === undefined) index = 0;
+          return commands.insert(index);
+        };
+
+        commands.insertBelow = function(){
+          if(scope.selected === undefined) return commands.insert(0);
+          else return commands.insert(scope.selected + 1);
+        };
+
+        // When inserting a cell, we need to wait before resolving other functions
+        // for the cells onLoad function to resolve.
+        var insertPromise = $q.when(null);
+        var insertDeferred = null;
+        var createInsertPromise = function () {
+          insertPromise = insertPromise
+            .then(function(){
+              insertDeferred = $q.defer();
+              return insertDeferred.promise;
+            });
+          return insertPromise;
+        };
+
+        var newCell = function(){
+          return {guid: _.uniqueId()};
+        };
+
+        commands.insert = function(index){
+          cells.splice(index, 0, newCell());
+          createInsertPromise();
+          commands.selectCell(index);
+          return insertPromise
+        };
+
+        var copied = null;
+        commands.copy = function() {
+          copied = cells[scope.selected];
+        };
+
+        commands.remove = function() {
+          cells.splice(scope.selected, 1);
+          if(scope.selected == cells.length) {
+            commands.selectCell(scope.selected - 1);
+          }
+          else commands.selectCell(scope.selected);
+        };
+
+        commands.cut = function() {
+          commands.copy();
+          commands.remove();
+        };
+
+        commands.editMode = function(){
+          var selected = scope.selected;
+          insertPromise
+            .then(function(){
+              if(selected == scope.selected){
+                cells[selected].cmInstance.getInputField().focus();
+              }
+            });
+        };
+
+        // element to focus for notebook shortcuts
+        var notebookElement = element.find('md-content')[0];
+        commands.commandMode = function(){
+          var selected = scope.selected;
+          insertPromise
+            .then(function(){
+              if(selected == scope.selected) {
+                cells[selected].cmInstance.getInputField().blur();
+                notebookElement.focus();
+              }
+            });
+        };
+
+        commands.selectCell = function(index) {
+          if(index === undefined || index < 0) index = 0;
+          if(index == cells.length){
+            commands.insert(index);
+          }
+          scope.selected = index;
+        };
+
+        // Initialize directive position
         commands.selectCell(0);
 
-        // load code mirror instances
-        loadCodeMirrors();
-
+        // Create hotkeys
         element.bind('keydown', function(event){
           scope.$apply(function(){
-            console.log(event.keyCode);
             if(event.keyCode == 13 && (event.shiftKey || event.ctrlKey || event.altKey)){
               handleExecute(event);
+              return;
             }
-            else{
-              var cmInstance = cmInstances[scope.selected];
-              if(cmInstance.hasFocus()) handleEditMode(event, cmInstance);
+            var selected = scope.selected;
+            var cmInstance = cells[selected].cmInstance;
+            // Try to handle the key command using the cached instances
+            // of cmInstance, otherwise we can't preventDefault properly
+            if(cmInstance !== undefined) {
+              if (cmInstance.hasFocus()) handleEditMode(event, cmInstance);
               else handleCommandMode(event, cmInstance);
+            } else {
+              // Well somethings weird so let's just prevent the event
+              // and try to resolve the command.
+              event.preventDefault();
+              insertPromise
+                .then(function () {
+                  cmInstance = cells[selected].cmInstance;
+                  if (cmInstance.hasFocus()) handleEditMode(event, cmInstance);
+                  else handleCommandMode(event, cmInstance);
+                });
             }
           });
         });
-
-        function getCodeMirror (index){
-          if(index === undefined) index = scope.selected;
-          var deferred = $q.defer();
-          // In case the cell was just created, insert a timeout
-          // before getting CodeMirror promise to ensure cell
-          // is created.
-          $timeout(function(){
-            if(index === undefined) index = scope.selected;
-            scope.cmPromises[index]
-              .then(function(cm){
-                deferred.resolve(cm);
-              });
-          });
-          return deferred.promise;
-        }
-
-        // load all code mirror instances
-        function loadCodeMirrors () {
-          $timeout(function(){
-            $q.all(_.map(_.range(scope.notebook.cells.length), getCodeMirror))
-              .then(function(result){
-                cmInstances = result;
-              });
-          });
-        }
 
         function handleEditMode (event, cm) {
           if(event.keyCode == 27) { // esc
@@ -136,57 +164,70 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           }
         }
 
-        function handleCommandMode (event, cm){
+        function handleCommandMode (event, cm) {
           var key = event.keyCode;
-          if(key == 13){ // enter
+          if (key == 13) { // enter
             event.preventDefault();
             commands.editMode();
           }
-          else if(key == 38 || key == 75) { // up or k
-            if(scope.selected > 0){
+          else if (key == 38 || key == 75) { // up or k
+            event.preventDefault();
+            if (scope.selected > 0) {
               commands.selectCell(scope.selected - 1);
             }
           }
-          else if(key == 40 || key == 74) { // down or j
-            if(scope.selected < scope.notebook.cells.length - 1){
+          else if (key == 40 || key == 74) { // down or j
+            event.preventDefault();
+            if (scope.selected < cells.length - 1) {
               commands.selectCell(scope.selected + 1);
             }
           }
-          else if(key == 88) { // x
+          else if (key == 88) { // x
+            event.preventDefault();
             commands.cut();
           }
-          else if(key == 86) { // v
+          else if (key == 86) { // v
+            event.preventDefault();
             commands.paste();
           }
-          else if(key == 90) { // v
+          else if (key == 90) { // v
+            event.preventDefault();
             commands.undo();
           }
-          else if(key == 65) { // a
+          else if (key == 65) { // a
+            event.preventDefault();
             commands.insertAbove();
           }
-          else if(key == 66) { // b
+          else if (key == 66) { // b
+            event.preventDefault();
             commands.insertBelow();
           }
-          else if(key == 67) { // c
+          else if (key == 67) { // c
+            event.preventDefault();
             commands.copy();
           }
-          else if(key == 77) { // m
+          else if (key == 77) { // m
+            event.preventDefault();
             commands.merge();
           }
         }
 
         function handleExecute (event) {
           event.preventDefault();
-          scope.execute[scope.selected]();
-          cmInstances[scope.selected].getInputField().blur();
-          if(event.shiftKey) {
-            commands.selectCell(scope.selected + 1);
-          }
-          else if(event.altKey) {
-            commands.insert();
-            commands.selectCell(scope.selected + 1);
-          }
-          commands.commandMode();
+          var selected = scope.selected;
+          insertPromise
+            .then(function(){
+              if(selected != scope.selected) return;
+              cells[selected].execute();
+              cells[selected].cmInstance.getInputField().blur();
+              if(event.shiftKey) {
+                commands.selectCell(scope.selected + 1);
+              }
+              else if(event.altKey) {
+                commands.insertBelow()
+              }
+              commands.commandMode();
+            });
         }
       }
     };
