@@ -10,17 +10,19 @@
   @media (min-width: 1200px){
     width: 1140px;
   }
+
+  .md-codecell {
+    transform: scale(.98);
+    transition: all linear .2s;
+  }
+
   .selected{
-    md-whiteframe {
+    .md-codecell {
       box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);
-      transform: scale(1);
+      transform: scale(1.00);
     }
     .CodeMirror.cm-s-default.CodeMirror-focused{
       box-shadow: 0 0 1pt 1pt green;
     }
-  }
-  md-whiteframe {
-    transform: scale(.95);
-    transition: all linear .2s;
   }
 }

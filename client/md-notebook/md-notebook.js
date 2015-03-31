@@ -66,12 +66,8 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           return insertPromise;
         };
 
-        var newCell = function(){
-          return {guid: _.uniqueId()};
-        };
-
         commands.insert = function(index){
-          cells.splice(index, 0, newCell());
+          cells.splice(index, 0, {});
           createInsertPromise();
           commands.selectCell(index);
           return insertPromise
@@ -88,11 +84,25 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
             commands.selectCell(scope.selected - 1);
           }
           else commands.selectCell(scope.selected);
+          // Need to reenter command mode here in case
+          // focus was placed on the element
+          // we just removed.
+          commands.commandMode();
         };
 
         commands.cut = function() {
           commands.copy();
           commands.remove();
+        };
+
+        commands.paste = function() {
+          if(copied) {
+            cells.splice(scope.selected + 1, 0, copyCell(copied));
+            createInsertPromise();
+            commands.selectCell(scope.selected + 1);
+            return insertPromise;
+          }
+          return $q.when(null);
         };
 
         commands.editMode = function(){
@@ -228,6 +238,16 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
               }
               commands.commandMode();
             });
+        }
+
+        function copyCell (cell) {
+          // We need a temporary clone to delete the execute/cmInstance attributes from the cell
+          // then we'll call angular copy to clone deep the cell while taking care
+          // of any ng-repeat identity crises.
+          var temp = _.clone(copied);
+          delete temp.execute;
+          delete temp.cmInstance;
+          return angular.copy(temp);
         }
       }
     };
