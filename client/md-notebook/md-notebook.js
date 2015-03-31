@@ -23,15 +23,17 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           };
         }
         var cells = scope.notebook.cells;
+        scope.isCommandMode = null;
 
         // Setup a guid for each cell
         _.forEach(cells, function(cell){
           cell.guid = _.uniqueId();
         });
 
-        scope.onCellLoad = function(index, cmInstance, execute){
+        scope.onCellLoad = function(index, cmInstance, execute, toggleOutput){
           cells[index].cmInstance = cmInstance;
           cells[index].execute = execute;
+          cells[index].toggleOutput = toggleOutput;
           if(insertDeferred) insertDeferred.resolve(null);
         };
 
@@ -99,10 +101,26 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           if(copied) {
             cells.splice(scope.selected + 1, 0, copyCell(copied));
             createInsertPromise();
-            commands.selectCell(scope.selected + 1);
+            commands.selectBelow();
             return insertPromise;
           }
           return $q.when(null);
+        };
+
+        commands.swap = function(index) {
+          if(index < 0 || index >= cells.length) return;
+          var selectedCell = cells[scope.selected];
+          cells[scope.selected] = cells[index];
+          cells[index] = selectedCell;
+          commands.selectCell(index);
+        };
+
+        commands.moveUp = function(){
+          commands.swap(scope.selected - 1);
+        };
+
+        commands.moveDown = function() {
+          commands.swap(scope.selected + 1);
         };
 
         commands.editMode = function(){
@@ -118,14 +136,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
         // element to focus for notebook shortcuts
         var notebookElement = element.find('md-content')[0];
         commands.commandMode = function(){
-          var selected = scope.selected;
-          insertPromise
-            .then(function(){
-              if(selected == scope.selected) {
-                cells[selected].cmInstance.getInputField().blur();
-                notebookElement.focus();
-              }
-            });
+          notebookElement.focus();
         };
 
         commands.selectCell = function(index) {
@@ -136,11 +147,32 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           scope.selected = index;
         };
 
+        commands.selectBelow = function() {
+          if (scope.selected < cells.length - 1) {
+            commands.selectCell(scope.selected + 1);
+          }
+        };
+
+        commands.selectAbove = function() {
+          if (scope.selected > 0) {
+            commands.selectCell(scope.selected - 1);
+          }
+        };
+
+        commands.toggleOutput = function() {
+          var selected = scope.selected;
+          insertPromise
+            .then(function(){
+              if(selected == scope.selected) cells[selected].toggleOutput();
+            });
+        };
         // Initialize directive position
         commands.selectCell(0);
+        commands.commandMode();
 
         // Create hotkeys
         element.bind('keydown', function(event){
+          console.log(event.keyCode);
           scope.$apply(function(){
             if(event.keyCode == 13 && (event.shiftKey || event.ctrlKey || event.altKey)){
               handleExecute(event);
@@ -151,17 +183,17 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
             // Try to handle the key command using the cached instances
             // of cmInstance, otherwise we can't preventDefault properly
             if(cmInstance !== undefined) {
-              if (cmInstance.hasFocus()) handleEditMode(event, cmInstance);
-              else handleCommandMode(event, cmInstance);
+              if (scope.isCommandMode) handleCommandMode(event, cmInstance);
+              else handleEditMode(event, cmInstance);
             } else {
-              // Well somethings weird so let's just prevent the event
-              // and try to resolve the command.
+              // An insertion is still resolving; let's prevent the event to be save
+              // and then try to resolve the command.
               event.preventDefault();
               insertPromise
                 .then(function () {
                   cmInstance = cells[selected].cmInstance;
-                  if (cmInstance.hasFocus()) handleEditMode(event, cmInstance);
-                  else handleCommandMode(event, cmInstance);
+                  if (scope.isCommandMode) handleCommandMode(event, cmInstance);
+                  else handleEditMode(event, cmInstance);
                 });
             }
           });
@@ -176,49 +208,61 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
 
         function handleCommandMode (event, cm) {
           var key = event.keyCode;
-          if (key == 13) { // enter
-            event.preventDefault();
-            commands.editMode();
-          }
-          else if (key == 38 || key == 75) { // up or k
-            event.preventDefault();
-            if (scope.selected > 0) {
-              commands.selectCell(scope.selected - 1);
+          if(!(event.ctrlKey || event.shiftKey || event.altKey)) {
+            if (key == 13) { // enter
+              event.preventDefault();
+              commands.editMode();
+            }
+            else if (key == 38 || key == 75) { // up or k
+              event.preventDefault();
+              commands.selectAbove();
+            }
+            else if (key == 40 || key == 74) { // down or j
+              event.preventDefault();
+              commands.selectBelow();
+            }
+            else if (key == 88) { // x
+              event.preventDefault();
+              commands.cut();
+            }
+            else if (key == 86) { // v
+              event.preventDefault();
+              commands.paste();
+            }
+            else if (key == 90) { // v
+              event.preventDefault();
+              commands.undo();
+            }
+            else if (key == 65) { // a
+              event.preventDefault();
+              commands.insertAbove();
+            }
+            else if (key == 66) { // b
+              event.preventDefault();
+              commands.insertBelow();
+            }
+            else if (key == 67) { // c
+              event.preventDefault();
+              commands.copy();
+            }
+            else if (key == 77) { // m
+              event.preventDefault();
+              commands.merge();
+            }
+            else if (key == 79) { // o
+              event.preventDefault();
+              commands.toggleOutput();
             }
           }
-          else if (key == 40 || key == 74) { // down or j
-            event.preventDefault();
-            if (scope.selected < cells.length - 1) {
-              commands.selectCell(scope.selected + 1);
+          else if(event.ctrlKey) {
+            if(key == 75) { // k
+              event.preventDefault();
+              commands.moveUp();
             }
-          }
-          else if (key == 88) { // x
-            event.preventDefault();
-            commands.cut();
-          }
-          else if (key == 86) { // v
-            event.preventDefault();
-            commands.paste();
-          }
-          else if (key == 90) { // v
-            event.preventDefault();
-            commands.undo();
-          }
-          else if (key == 65) { // a
-            event.preventDefault();
-            commands.insertAbove();
-          }
-          else if (key == 66) { // b
-            event.preventDefault();
-            commands.insertBelow();
-          }
-          else if (key == 67) { // c
-            event.preventDefault();
-            commands.copy();
-          }
-          else if (key == 77) { // m
-            event.preventDefault();
-            commands.merge();
+            else if(key == 74) { // j
+              event.preventDefault();
+              commands.moveDown();
+            }
           }
         }
 
@@ -247,6 +291,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           var temp = _.clone(copied);
           delete temp.execute;
           delete temp.cmInstance;
+          delete temp.toggleOutput;
           return angular.copy(temp);
         }
       }

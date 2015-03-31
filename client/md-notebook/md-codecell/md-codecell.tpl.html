@@ -1,21 +1,29 @@
-<md-whiteframe class="md-codecell md-whiteframe-z1" tabindex="0" layout="column">
+<md-whiteframe class="md-codecell md-whiteframe-z1" layout="column">
     <div class="input" layout="row">
         <div class="prompt">In [{{ cell.execution_count||' ' }}]:</div>
         <div flex ng-if="delay" class="code-area">
             <ui-codemirror ui-codemirror-opts="cmOptions" ng-model="cell.source"></ui-codemirror>
         </div>
     </div>
-    <md-content class="output-container" ng-show="cell.outputs.length">
+    <div class="output-container" ng-class="{'toggled': showOutput}" layout="column">
+        <md-button ng-click="toggleOutput()" ng-show="cell.outputs.length" class="md-button-toggle md-button md-default-theme">
+            <div flex layout="row">
+                <span flex></span>
+                <span class="toggle-icon glyphicon glyphicon-chevron-down" ng-class="{'toggled': showOutput}"></span>
+            </div>
+        </md-button>
         <md-divider class="divider"></md-divider>
-        <div class="output" layout="row" layout-align="start end">
-            <div class="display-area" layout="column">
-                <div class="display-line" ng-repeat="output in outputs track by $index" layout="row">
-                    <div class="prompt">
-                        <div ng-if="output.data">Out[{{ cell.execution_count || ' '}}]:</div>
+        <md-content class="output-content" ng-show="cell.outputs.length && showOutput">
+            <div class="output" layout="row" layout-align="start end">
+                <div class="display-area" layout="column">
+                    <div class="display-line" ng-repeat="output in outputs track by $index" layout="row">
+                        <div class="prompt">
+                            <div ng-if="output.data">Out[{{ cell.execution_count || ' '}}]:</div>
+                        </div>
+                        <output-area output="output"></output-area>
                     </div>
-                    <output-area output="output"></output-area>
                 </div>
             </div>
-        </div>
-    </md-content>
+        </md-content>
+    </div>
 </md-whiteframe>

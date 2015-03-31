@@ -7,7 +7,7 @@
 }
 
 .md-codecell {
-  padding: 5px;
+  padding: 0;
   margin: 20px;
 
   .md-codecell-font;
@@ -49,10 +49,26 @@
     }
   }
 
-
+  .output-container {
+    .md-button.md-default-theme {
+      margin-top: -10px;
+      &:focus {
+        background-color: transparent;
+      }
+    }
+    .toggle-icon{
+      display: block;
+      vertical-align: middle;
+      transform: rotate(0deg);
+      transition: transform 0.2s ease-in-out;
+      &.toggled{
+        transform: rotate(180deg);
+      }
+    }
+  }
   // output grow
   @md-codecell-maxheight: 80vh;
-  .output-container{
+  .output-content{
     max-height: @md-codecell-maxheight;
     transition: max-height linear .5s;
     overflow-y: auto;
@@ -65,11 +81,8 @@
       overflow-y: hidden;
       max-height: 0;
     }
-    &.ng-hide-remove.ng-hide-remove-active {
-      overflow-y: hidden;
-      max-height: @md-codecell-maxheight;
-    }
-    &.ng-hide-add{
+    &.ng-hide-remove.ng-hide-remove-active,
+    &.ng-hide-add {
       overflow-y: hidden;
       max-height: @md-codecell-maxheight;
     }

@@ -16,6 +16,37 @@
     transition: all linear .2s;
   }
 
+  .cell {
+    //&.ng-move,
+    &.ng-enter,
+    &.ng-leave {
+      transition: all linear .2s;
+    }
+
+    &.ng-leave.ng-leave-active,
+    //&.ng-move,
+    &.ng-enter{
+      .md-codecell {
+        overflow-y: hidden;
+        transition: all linear .2s;
+        max-height: 0;
+        //transform: scale(0);
+        box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+      }
+    }
+    &.ng-leave,
+    //&.ng-move.ng-move-active,
+    &.ng-enter.ng-enter-active{
+      .md-codecell {
+        transition: all linear .2s;
+        //transform: scale(1.00);
+        max-height: 200px;
+        box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+
+
   .selected{
     .md-codecell {
       box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);

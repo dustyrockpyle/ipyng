@@ -25,7 +25,7 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
         });
 
         var onCodeMirrorLoad = function(cmInstance){
-          if(scope.onLoad) scope.onLoad({cmInstance: cmInstance, execute: execute});
+          if(scope.onLoad) scope.onLoad({cmInstance: cmInstance, execute: execute, toggleOutput: toggleOutput});
         };
 
         scope.cmOptions = {
@@ -52,12 +52,21 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
               cell.execution_count = result.execution_count;
               if(result.data) outputs.push(result);
               scope.outputs = outputs;
+              toggleOutput(true);
             })
             .catch(function(error){
               outputs.push(error);
               cell.execution_count = error.execution_count;
               scope.outputs = outputs;
+              toggleOutput(true);
             });
+        }
+
+        scope.showOutput = true;
+        scope.toggleOutput = toggleOutput;
+        function toggleOutput (show) {
+          if(show === undefined) scope.showOutput = !scope.showOutput;
+          else scope.showOutput = show;
         }
       }
     };
