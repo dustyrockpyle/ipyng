@@ -1,5 +1,5 @@
 angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.output-area', 'ui.utils', 'ngMaterial', 'ui.bootstrap', 'ng.lodash'])
-  .directive('mdCodecell', function (_, $q, $timeout) {
+  .directive('mdCodecell', function (_, $q, $timeout, ipyUtils) {
     return {
       templateUrl: 'md-codecell.tpl.html',
       restrict: 'E',
@@ -26,6 +26,18 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
 
         var onCodeMirrorLoad = function(cmInstance){
           if(scope.onLoad) scope.onLoad({cmInstance: cmInstance, execute: execute, toggleOutput: toggleOutput});
+          cmInstance.setOption('extraKeys', {
+            Tab: function(cm) {
+              complete(cm);
+            },
+            '.': function(cm) {
+              cm.replaceSelection('.');
+              var watch = scope.$watch('cell.source', function(){
+                watch();
+                complete(cm);
+              });
+            }
+          });
         };
 
         scope.cmOptions = {
@@ -67,6 +79,13 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
         function toggleOutput (show) {
           if(show === undefined) scope.showOutput = !scope.showOutput;
           else scope.showOutput = show;
+        }
+
+        function complete (cmInstance) {
+          kernel.complete(cell.source, ipyUtils.to_absolute_cursor_pos(cmInstance))
+            .then(function(result){
+              console.log(result);
+            });
         }
       }
     };
