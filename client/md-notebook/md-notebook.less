@@ -10,24 +10,20 @@
   @media (min-width: 1200px){
     width: 1140px;
   }
-
-  .md-codecell {
-    transform: scale(.98);
-    transition: all linear .2s;
-  }
-
   .cell-transition{
     transition: all linear .2s;
   }
 
+  .md-codecell {
+    transform: scale(.98);
+    .cell-transition;
+  }
   .cell {
     .md-codecell{
       &.swapping{
-        //transform: scale(.98);
-        transition: all .1s linear;
+        transition: all .2s ease;
       }
     }
-    //&.ng-move,
     &.ng-enter,
     &.ng-leave {
       .cell-transition;
@@ -41,7 +37,6 @@
     }
 
     &.ng-leave.ng-leave-active,
-      //&.ng-move,
     &.ng-enter{
       .md-codecell {
         overflow-y: hidden;
@@ -52,7 +47,6 @@
       }
     }
     &.ng-leave,
-    //&.ng-move.ng-move-active,
     &.ng-enter.ng-enter-active{
       .md-codecell {
         .cell-transition;
@@ -65,7 +59,7 @@
 
   .md-codecell{
     z-index: 1;
-    background-color: rgba(255,255,255,1) !important;
+    background-color: rgba(255,255,255,1);
   }
 
   .selected{

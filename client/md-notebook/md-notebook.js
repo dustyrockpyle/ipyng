@@ -71,7 +71,10 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
         commands.insert = function(index){
           cells.splice(index, 0, {});
           createInsertPromise();
-          commands.selectCell(index);
+          insertPromise
+            .then(function(){
+              scope.selected = index;
+            });
           return insertPromise
         };
 
@@ -107,47 +110,90 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           return $q.when(null);
         };
 
-        commands.swap = function(index) {
-          if(index < 0 || index >= cells.length) return;
-          var items = _.filter(_.map(element.find('md-whiteframe'), angular.element), function(item){
-            return item.hasClass('md-codecell');
-          });
-          var selectedNode = items[scope.selected];
-          var targetNode = items[index];
-          console.log('swapping');
-          var targetTop = targetNode[0].getBoundingClientRect().top;
-          var selectedTop = selectedNode[0].getBoundingClientRect().top;
-          var translateY = targetTop - selectedTop;
-          console.log(selectedTop);
-          console.log(targetTop);
-          console.log(translateY);
-          $animate.addClass(selectedNode, 'swapping', {
-            from: {position: 'relative', top: 0},
-            to: {top: translateY + 'px'}
-          });
-          $animate.addClass(targetNode, 'swapping', {
-            from: {position: 'relative', top: 0},
-            to: {top: -translateY + 'px'}
-          }).then(function(){
-            selectedNode[0].removeAttribute("style");
-            targetNode[0].removeAttribute("style");
-            selectedNode.removeClass('swapping');
-            targetNode.removeClass('swapping');
-            var selectedCell = cells[scope.selected];
-            cells[scope.selected] = cells[index];
-            cells[index] = selectedCell;
-            commands.selectCell(index);
-            console.log('complete');
-            scope.$apply();
-          });
+        // An unfortunately complicated function to swap two adjacent cells in a pretty way.
+        var swap = function(moveUp) {
+          var selectedNode;
+          var targetNode;
+          var index;
+          var targetTop;
+          var selectedTop;
+          // Wait for insertions and other swaps to complete before beginning
+          insertPromise = insertPromise
+            .then(function(){
+              index = moveUp ? scope.selected + 1 : scope.selected - 1;
+              // if the swap is invalid reject the promise
+              if(index < 0 || index >= cells.length) return $q.reject(null);
+              // gather the codecells
+              var items = _.filter(_.map(element.find('md-whiteframe'), angular.element), function(item){
+                return item.hasClass('md-codecell');
+              });
+              selectedNode = items[scope.selected];
+              targetNode = items[index];
+              // We need to compute the y translation of the selected and target nodes.
+              // This is slightly complicated by the fact that the target node is scaled,
+              // hence the addition of the scaleHeight factor.
+              var targetRect = targetNode[0].getBoundingClientRect();
+              targetTop = targetRect.top;
+              var selectedRect = selectedNode[0].getBoundingClientRect();
+              selectedTop = selectedRect.top;
+              var translateY = targetTop - selectedTop;
+              var targetHeight = targetRect.height;
+              var selectedHeight = selectedRect.height;
+              var scale = targetHeight / targetNode[0].offsetHeight;
+              var scaleHeight = targetHeight *(1-scale) / 2;
+              var deltaHeight = targetHeight - selectedHeight;
+              var newSelectedTop = translateY;
+              var newTargetTop = -translateY;
+              if(translateY > 0) {
+                newSelectedTop += deltaHeight + scaleHeight;
+                newTargetTop += scaleHeight;
+              } else {
+                newSelectedTop -= scaleHeight;
+                newTargetTop -= deltaHeight + scaleHeight;
+              }
+              // Run the animation for each node, and resolve this promise
+              // when the animation has finished
+
+              var selectedAnimation = $animate.addClass(selectedNode, 'swapping', {
+                from: {position: 'relative', top: 0},
+                to: {top: newSelectedTop + 'px'}
+              });
+              var targetAnimation = $animate.addClass(targetNode, 'swapping', {
+                from: {position: 'relative', top: 0},
+                to: {top: newTargetTop + 'px'}
+              });
+              return $q.all([selectedAnimation, targetAnimation]);
+            })
+            .then(function(){
+              // remove the animation styles
+              selectedNode[0].removeAttribute("style");
+              targetNode[0].removeAttribute("style");
+              selectedNode.removeClass('swapping');
+              targetNode.removeClass('swapping');
+              var targetRect = targetNode[0].getBoundingClientRect();
+              // Actually swap the cells
+              var selectedCell = cells[scope.selected];
+              cells[scope.selected] = cells[index];
+              cells[index] = selectedCell;
+              scope.selected = index;
+              // Seem to need a small delay to allow animation to complete properly
+              // in case a bunch of swaps have been cued up. This will need testing
+              // on faster/slower machines. There's probably a better solution than this.
+              return $timeout(_.noop, 20);
+            })
+            // Assume the reason the promise failed was that the swap
+            // was invalid and that we don't need to clean anything up.
+            .catch(function(){
+              return null;
+            });
         };
 
         commands.moveUp = function(){
-          commands.swap(scope.selected - 1);
+          swap(true);
         };
 
         commands.moveDown = function() {
-          commands.swap(scope.selected + 1);
+          swap(false);
         };
 
         commands.editMode = function(){
@@ -169,9 +215,12 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
         commands.selectCell = function(index) {
           if(index === undefined || index < 0) index = 0;
           if(index == cells.length){
-            commands.insert(index);
+            return commands.insert(index);
           }
-          scope.selected = index;
+          insertPromise
+            .then(function(){
+              scope.selected = index;
+            });
         };
 
         commands.selectBelow = function() {
@@ -199,7 +248,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
 
         // Create hotkeys
         element.bind('keydown', function(event){
-          console.log(event.keyCode);
+          //console.log(event.keyCode);
           scope.$apply(function(){
             if(event.keyCode == 13 && (event.shiftKey || event.ctrlKey || event.altKey)){
               handleExecute(event);
