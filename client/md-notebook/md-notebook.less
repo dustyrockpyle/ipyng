@@ -16,21 +16,38 @@
     transition: all linear .2s;
   }
 
+  .cell-transition{
+    transition: all linear .2s;
+  }
+
   .cell {
+    .md-codecell{
+      &.swapping{
+        //transform: scale(.98);
+        transition: all .1s linear;
+      }
+    }
     //&.ng-move,
     &.ng-enter,
     &.ng-leave {
-      transition: all linear .3s;
+      .cell-transition;
+      overflow-y: hidden;
+      .output-content{
+        overflow-y: hidden;
+      }
+      .md-codecell{
+        display: block;
+      }
     }
 
     &.ng-leave.ng-leave-active,
-    //&.ng-move,
+      //&.ng-move,
     &.ng-enter{
       .md-codecell {
         overflow-y: hidden;
-        transition: all linear .3s;
+        .cell-transition;
         max-height: 0;
-        transform: scale(.95);
+        transform: scale(.98);
         box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
       }
     }
@@ -38,7 +55,7 @@
     //&.ng-move.ng-move-active,
     &.ng-enter.ng-enter-active{
       .md-codecell {
-        transition: all linear .3s;
+        .cell-transition;
         transform: scale(1.00);
         max-height: 200px;
         box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);
@@ -46,9 +63,14 @@
     }
   }
 
+  .md-codecell{
+    z-index: 1;
+    background-color: rgba(255,255,255,1) !important;
+  }
 
   .selected{
     .md-codecell {
+      z-index: 2;
       box-shadow: 0 8px 17px rgba(0, 0, 0, 0.2);
       transform: scale(1.00);
     }

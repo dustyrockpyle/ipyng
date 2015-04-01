@@ -1,5 +1,5 @@
 angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'])
-  .directive('mdNotebook', function(_, $timeout, $q){
+  .directive('mdNotebook', function(_, $timeout, $q, $animate){
     return {
       templateUrl: 'md-notebook.tpl.html',
       restrict: 'E',
@@ -109,10 +109,37 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
 
         commands.swap = function(index) {
           if(index < 0 || index >= cells.length) return;
-          var selectedCell = cells[scope.selected];
-          cells[scope.selected] = cells[index];
-          cells[index] = selectedCell;
-          commands.selectCell(index);
+          var items = _.filter(_.map(element.find('md-whiteframe'), angular.element), function(item){
+            return item.hasClass('md-codecell');
+          });
+          var selectedNode = items[scope.selected];
+          var targetNode = items[index];
+          console.log('swapping');
+          var targetTop = targetNode[0].getBoundingClientRect().top;
+          var selectedTop = selectedNode[0].getBoundingClientRect().top;
+          var translateY = targetTop - selectedTop;
+          console.log(selectedTop);
+          console.log(targetTop);
+          console.log(translateY);
+          $animate.addClass(selectedNode, 'swapping', {
+            from: {position: 'relative', top: 0},
+            to: {top: translateY + 'px'}
+          });
+          $animate.addClass(targetNode, 'swapping', {
+            from: {position: 'relative', top: 0},
+            to: {top: -translateY + 'px'}
+          }).then(function(){
+            selectedNode[0].removeAttribute("style");
+            targetNode[0].removeAttribute("style");
+            selectedNode.removeClass('swapping');
+            targetNode.removeClass('swapping');
+            var selectedCell = cells[scope.selected];
+            cells[scope.selected] = cells[index];
+            cells[index] = selectedCell;
+            commands.selectCell(index);
+            console.log('complete');
+            scope.$apply();
+          });
         };
 
         commands.moveUp = function(){

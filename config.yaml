@@ -56,8 +56,8 @@ html:
         - *client_scripts
         - !join [*vendor, codemirror/lib/codemirror.css]
         - !join [*vendor, jquery-ui/themes/smoothness/jquery-ui.css]
-        - !join [*vendor, angular-material/angular-material.css]
         - *css_dest
+        - !join [*vendor, angular-material/angular-material.css]
     watch: !flatten
         - *client_scripts
         - !join [*client, test/index.html]
