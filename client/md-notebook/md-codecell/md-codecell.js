@@ -1,5 +1,5 @@
-angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.output-area', 'ui.utils', 'ngMaterial', 'ui.bootstrap', 'ng.lodash'])
-  .directive('mdCodecell', function (_, $q, $timeout, ipyUtils) {
+angular.module('md.codecell', ['ipyng', 'templates', 'ipy.codearea', 'ipy.output-area', 'ngMaterial', 'ui.bootstrap', 'ng.lodash'])
+  .directive('mdCodecell', function () {
     return {
       templateUrl: 'md-codecell.tpl.html',
       restrict: 'E',
@@ -17,34 +17,12 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
         cell.outputs = cell.outputs || [];
         cell.source = cell.source || '';
         scope.outputs = cell.outputs;
+        scope.codeAreaLoad = codeAreaLoad;
 
-        // Insert a 0ms delay to load codemirror, otherwise codemirror options don't register correctly
-        scope.delay = false;
-        $timeout(function(){
-          scope.delay = true;
-        });
 
-        var onCodeMirrorLoad = function(cmInstance){
-          if(scope.onLoad) scope.onLoad({cmInstance: cmInstance, execute: execute, toggleOutput: toggleOutput});
-          cmInstance.setOption('extraKeys', {
-            Tab: function(cm) {
-              complete(cm);
-            },
-            '.': function(cm) {
-              cm.replaceSelection('.');
-              var watch = scope.$watch('cell.source', function(){
-                watch();
-                complete(cm);
-              });
-            }
-          });
-        };
-
-        scope.cmOptions = {
-          mode: kernel.language_info.name,
-          onLoad: onCodeMirrorLoad,
-          scrollbarStyle: null
-        };
+        function codeAreaLoad (cm){
+          if(scope.onLoad) scope.onLoad({cm: cm, execute: execute, toggleOutput: toggleOutput});
+        }
 
         function execute () {
           cell.outputs = [];
@@ -79,13 +57,6 @@ angular.module('md.codecell', ['ipyng', 'templates', 'ui.codemirror', 'ipy.outpu
         function toggleOutput (show) {
           if(show === undefined) scope.showOutput = !scope.showOutput;
           else scope.showOutput = show;
-        }
-
-        function complete (cmInstance) {
-          kernel.complete(cell.source, ipyUtils.to_absolute_cursor_pos(cmInstance))
-            .then(function(result){
-              console.log(result);
-            });
         }
       }
     };

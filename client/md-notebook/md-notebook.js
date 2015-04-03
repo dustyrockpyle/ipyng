@@ -30,8 +30,8 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           cell.guid = _.uniqueId();
         });
 
-        scope.onCellLoad = function(index, cmInstance, execute, toggleOutput){
-          cells[index].cmInstance = cmInstance;
+        scope.onCellLoad = function(index, cm, execute, toggleOutput){
+          cells[index].cm = cm;
           cells[index].execute = execute;
           cells[index].toggleOutput = toggleOutput;
           if(insertDeferred) insertDeferred.resolve(null);
@@ -201,7 +201,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           insertPromise
             .then(function(){
               if(selected == scope.selected){
-                cells[selected].cmInstance.getInputField().focus();
+                cells[selected].cm.getInputField().focus();
               }
             });
         };
@@ -255,21 +255,21 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
               return;
             }
             var selected = scope.selected;
-            var cmInstance = cells[selected].cmInstance;
+            var cm = cells[selected].cm;
             // Try to handle the key command using the cached instances
-            // of cmInstance, otherwise we can't preventDefault properly
-            if(cmInstance !== undefined) {
-              if (scope.isCommandMode) handleCommandMode(event, cmInstance);
-              else handleEditMode(event, cmInstance);
+            // of cm, otherwise we can't preventDefault properly
+            if(cm !== undefined) {
+              if (scope.isCommandMode) handleCommandMode(event, cm);
+              else handleEditMode(event, cm);
             } else {
               // An insertion is still resolving; let's prevent the event to be save
               // and then try to resolve the command.
               event.preventDefault();
               insertPromise
                 .then(function () {
-                  cmInstance = cells[selected].cmInstance;
-                  if (scope.isCommandMode) handleCommandMode(event, cmInstance);
-                  else handleEditMode(event, cmInstance);
+                  cm = cells[selected].cm;
+                  if (scope.isCommandMode) handleCommandMode(event, cm);
+                  else handleEditMode(event, cm);
                 });
             }
           });
@@ -349,7 +349,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
             .then(function(){
               if(selected != scope.selected) return;
               cells[selected].execute();
-              cells[selected].cmInstance.getInputField().blur();
+              cells[selected].cm.getInputField().blur();
               if(event.shiftKey) {
                 commands.selectCell(scope.selected + 1);
               }
@@ -361,12 +361,12 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
         }
 
         function copyCell (cell) {
-          // We need a temporary clone to delete the execute/cmInstance attributes from the cell
+          // We need a temporary clone to delete the execute/cm attributes from the cell
           // then we'll call angular copy to clone deep the cell while taking care
           // of any ng-repeat identity crises.
           var temp = _.clone(copied);
           delete temp.execute;
-          delete temp.cmInstance;
+          delete temp.cm;
           delete temp.toggleOutput;
           return angular.copy(temp);
         }

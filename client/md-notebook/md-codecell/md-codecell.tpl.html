@@ -1,9 +1,7 @@
 <md-whiteframe class="md-codecell md-whiteframe-z1" layout="column">
     <div class="input" layout="row">
         <div class="prompt">In [{{ cell.execution_count||' ' }}]:</div>
-        <div flex ng-if="delay" class="code-area">
-            <ui-codemirror ui-codemirror-opts="cmOptions" ng-model="cell.source"></ui-codemirror>
-        </div>
+        <ipy-codearea source="cell.source" on-load="codeAreaLoad(cm)" flex></ipy-codearea>
     </div>
     <div class="output-container" ng-class="{'toggled': showOutput}" layout="column">
         <md-button ng-click="toggleOutput()" ng-show="cell.outputs.length" class="md-button-toggle md-button md-default-theme">

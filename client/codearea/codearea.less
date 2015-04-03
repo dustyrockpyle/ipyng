@@ -1,0 +1,42 @@
+.ipy-codearea{
+  .cm-keyword {
+    color: @kw-color;
+    font-weight: bold;
+  }
+  .cm-operator {
+    color: #AA22FF;
+    font-weight: bold;
+  }
+  .cm-string {
+    color: #BA2121;
+  }
+  .cm-number {
+    color: @kw-color;
+  }
+  .cm-comment {
+    color: #408080;
+    font-style: italic;
+  }
+  .cm-builtin {
+    color: @kw-color;
+  }
+  .CodeMirror {
+
+    &.cm-s-default {
+      border: 1px solid #cfcfcf;
+      background: #f7f7f7;
+      border-radius: 2px;
+      line-height: @codecell-line-height;
+      height: auto;
+      overflow-y: hidden;
+    }
+    .CodeMirror-scroll{
+      height: auto;
+      overflow-y: hidden;
+    }
+  }
+  .CodeMirror-lines {
+    padding: 0.4em;
+    min-height: 28px;
+  }
+}
