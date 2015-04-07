@@ -4,7 +4,8 @@
         <ipy-codearea source="cell.source" on-load="codeAreaLoad(cm)" flex></ipy-codearea>
     </div>
     <div class="output-container" ng-class="{'toggled': showOutput}" layout="column">
-        <md-button ng-click="toggleOutput()" ng-show="cell.outputs.length" class="md-button-toggle md-button md-default-theme">
+        <md-button ng-click="toggleOutput()" ng-show="cell.outputs.length"
+            class="md-button-toggle md-button md-default-theme" aria-label="Toggle Output">
             <div flex layout="row">
                 <span class="toggle-icon glyphicon glyphicon-chevron-down" ng-class="{'toggled': showOutput}" flex></span>
             </div>
