@@ -20,7 +20,7 @@ function ipyCodeareaDirective() {
   };
 }
 
-function ipyCodeareaCtrl ($scope, $element, ipyUtils, $q, _) {
+function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
   var self = this;
   self.ready = false;
   self.completions = [];
@@ -28,10 +28,13 @@ function ipyCodeareaCtrl ($scope, $element, ipyUtils, $q, _) {
   self.completionsStyle = '';
   self.init = init;
 
-  var fetchCount = 0,
-    completeResult = [],
-    fetchPosition = null,
-    resetFlag = null;
+  var completeId = 0,
+    completeResult,
+    cursorPosition,
+    resetFlag,
+    completionMap,
+    completionNode = _.last($element.find('ul')),
+    cmNode;
 
   function init(kernel){
     self.kernel = kernel;
@@ -39,83 +42,150 @@ function ipyCodeareaCtrl ($scope, $element, ipyUtils, $q, _) {
       mode: self.kernel.language_info.name,
       onLoad: onCodeMirrorLoad
     };
+    resetCompletions();
     self.ready = true;
+    $document[0].body.appendChild(completionNode);
   }
 
   function onCodeMirrorLoad (cm) {
     if(self.onLoad) self.onLoad({cm: cm});
+    cmNode = $element.find('div')[1];
     self.cm = cm;
     cm.setOption('extraKeys', {
-      'Ctrl-Space': function() {
+      'Ctrl-Space': function(event) {
+        console.log('got to here');
+        event.preventDefault();
         resetCompletions();
-        updateCompletions();
+        fetchCompletions
+          .then(updateDisplay);
       }
     });
 
     cm.on('change', function(r, d){
       checkChange(d);
     });
+
+    cm.on('blur', function(){
+      self.showCompletions = false;
+    });
   }
 
   function checkChange(change) {
-    console.log(change);
+    cursorPosition = ipyUtils.to_absolute_cursor_pos(self.cm);
     // If we've edited multiple lines, just reset all completion data.
     if(change.text.length > 1 || change.removed.length > 1) {
       resetCompletions();
       return;
     }
 
+    // Limit automatic updates to 100 results.
+    var changeUpdate = _.bind(updateDisplay, null, 100, change);
     var text = change.text[0];
     var removed = change.removed[0];
-    if(_.contains(text, ' ')) {
+    // when typing a space, or backspacing a bunch, reset completions, but don't update
+    if(_.contains(text, ' ') || (completeResult && cursorPosition <= completeResult.cursor_start)) {
       resetCompletions();
     }
-
-    if(_.contains(removed, ' ')) {
+    // if we've typed a period, or backed up before the start of completion data
+    // reset completions, get the new ones, and update the display.
+    else if(_.contains(text, '.') || _.contains(removed, '.')) {
       resetCompletions();
-      updateCompletions();
+      fetchCompletions()
+        .then(changeUpdate);
     }
-
-    // if we've typed a period, reset the completions we have, and fetch new ones
-    if(_.contains(text, '.') || _.contains(removed, '.')) {
-      resetCompletions();
-      updateCompletions();
+    // If we're reset, we need to get completions then update the display
+    else if (resetFlag) {
+      fetchCompletions()
+        .then(changeUpdate);
+    }
+    // If we're not reset, then we can just update the display.
+    else {
+      changeUpdate();
     }
   }
 
   function resetCompletions () {
-    fetchPosition = null;
     completeResult = null;
+    completionMap = {};
     self.showCompletions = false;
     self.completions = [];
     resetFlag = true;
   }
 
+
   function fetchCompletions () {
-    fetchPosition = ipyUtils.to_absolute_cursor_pos(self.cm);
-    fetchCount += 1;
     resetFlag = false;
-    return self.kernel.complete(self.source, fetchPosition)
+    completeId += 1;
+    var thisId = completeId;
+    return self.kernel.complete(self.cm.getValue(), cursorPosition)
       .then(function(result){
-        console.log(result);
-        fetchCount -= 1;
-        return result;
-      });
-  }
-
-  function updateCompletions () {
-    return fetchCompletions()
-      .then(function(result){
-        if(fetchCount != 0 || resetFlag) return;
+        // If this isn't the latest complete request,
+        // or reset state has been set then don't update
+        if(thisId != completeId || resetFlag) return;
+        if(result.matches.length) {
+          // Strip the dots from the completion
+          var pIndex = result.matches[0].lastIndexOf('.');
+          if(pIndex != -1){
+            result.matches = _.map(result.matches, function(s) {
+              return s.slice(pIndex+1);
+            });
+            result.cursor_start += pIndex + 1;
+          }
+        }
         completeResult = result;
-        updateDisplay();
       });
   }
 
-  function updateDisplay () {
-    if(!completeResult.matches.length) return;
-    var first = completeResult.matches[0];
-    var pieces = first.split(/\./g);
-
+  function updateDisplay (limit, change) {
+    if(!completeResult) {
+      self.completions = [];
+      self.showCompletions = false;
+      return;
+    }
+    self.completions = getCompletions();
+    if(self.completions.length == 0){
+      self.showCompletions = false;
+      return;
+    }
+    if(!self.showCompletions) {
+      self.showCompletions = true;
+      var cursor = ipyUtils.from_absolute_cursor_pos(self.cm, completeResult.cursor_start);
+      var pos = self.cm.charCoords(cursor, 'window');
+      console.log(cmNode.getBoundingClientRect());
+      self.completionsStyle = {
+        position: 'absolute',
+        top: pos.bottom + 'px',
+        left: pos.left + 'px'
+      };
+    }
   }
+
+  function getCompletions () {
+    var fragment = self.cm.getValue().slice(completeResult.cursor_start, cursorPosition);
+    // Prime the completion map if empty.
+    if(_.size(completionMap) == 0) completionMap[''] = completeResult.matches;
+    if(completionMap[fragment]) return completionMap[fragment];
+    var keys = _.keys(completionMap);
+    // Find the fragment that most closely matches
+    var match = '';
+    _.forEach(keys, function(key){
+      if(key.length > fragment.length) return;
+      if(key.length >= match.length && _.startsWith(fragment, key)) match = key;
+    });
+    var previousFragment = fragment.slice(0, match.length);
+    _.forEach(fragment.slice(match.length), function(c){
+      var newFragment = previousFragment + c;
+      var newPos = newFragment.length - 1;
+      completionMap[newFragment] = _.filter(completionMap[previousFragment], function(completion){
+        return completion[newPos] == c;
+      });
+      previousFragment = newFragment;
+    });
+    return completionMap[fragment];
+  }
+
+  // clean up the completion node from the document body.
+  $scope.$on('$destroy', function(){
+    $document[0].body.removeChild(completionNode);
+  });
 }

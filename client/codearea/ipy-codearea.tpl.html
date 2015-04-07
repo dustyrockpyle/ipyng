@@ -1,6 +1,6 @@
 <div class="ipy-codearea">
     <div ui-codemirror="ctrl.cmOptions" ng-if="ctrl.ready" ng-model="ctrl.source"></div>
-    <ul class="completions" ng-style="ctrl.completionsStyle" ng-show="ctrl.showCompletions">
+    <ul class="ipy-completions" ng-style="ctrl.completionsStyle" ng-show="ctrl.showCompletions">
         <li class="completion" ng-repeat="completion in ctrl.completions">{{ completion }}</li>
     </ul>
 </div>
