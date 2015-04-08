@@ -27,6 +27,9 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
   self.showCompletions = false;
   self.completionsStyle = '';
   self.init = init;
+  self.selected = 0;
+  self.select = select;
+  self.autocomplete = autocomplete;
 
   var completeId = 0,
     completeResult,
@@ -34,15 +37,9 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
     resetFlag,
     completionMap,
     completionNode = _.last($element.find('ul')),
-    cmNode;
-
-  // Update position when window resizes
-  $window.addEventListener('resize', applyUpdatePosition);
-  // clean up the completion node from the document body and remove event listener
-  $scope.$on('$destroy', function(){
-    $document[0].body.removeChild(completionNode);
-    $window.removeEventListener('resize', applyUpdatePosition)
-  });
+    cmNode,
+    autocompleteFlag,
+    PAGE_JUMP = 6;
 
   function init(kernel){
     self.kernel = kernel;
@@ -52,7 +49,15 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
     };
     resetCompletions();
     self.ready = true;
+    // Put the completion node on the document body so it overlays properly
     $document[0].body.appendChild(completionNode);
+    // Update position when window resizes
+    $window.addEventListener('resize', applyUpdatePosition);
+    // Clean up the completion node from the document body and remove event listener on $destroy
+    $scope.$on('$destroy', function(){
+      $document[0].body.removeChild(completionNode);
+      $window.removeEventListener('resize', applyUpdatePosition)
+    });
   }
 
   function onCodeMirrorLoad (cm) {
@@ -60,34 +65,91 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
     cmNode = $element.find('div')[1];
     self.cm = cm;
     cm.setOption('extraKeys', {
-      'Ctrl-Space': function(event) {
-        console.log('got to here');
-        event.preventDefault();
+      'Ctrl-Space': function() {
         resetCompletions();
-        fetchCompletions
+        fetchCompletions()
           .then(updateDisplay);
+        return false;
+      },
+      'Up': function() {
+        if(self.showCompletions){
+          selectPrevious();
+          return false;
+        }
+        return $window.CodeMirror.Pass;
+      },
+      'Down': function() {
+        if(self.showCompletions){
+          selectNext();
+          return false;
+        }
+        return $window.CodeMirror.Pass;
+      },
+      'Tab': function() {
+        if(self.showCompletions){
+          autocomplete();
+          return false;
+        }
+        return $window.CodeMirror.Pass;
+      },
+      'Enter': function() {
+        if(self.showCompletions){
+          autocomplete();
+          return false;
+        }
+        return $window.CodeMirror.Pass;
+      },
+      'PageUp': function() {
+        if(self.showCompletions){
+          selectPrevious(PAGE_JUMP);
+          return false;
+        }
+        return $window.CodeMirror.Pass;
+      },
+      'PageDown': function() {
+        if(self.showCompletions) {
+          selectNext(PAGE_JUMP);
+          return false;
+        }
       }
     });
 
-    var change = false;
-    cm.on('change', function(r, d){
-      change = true;
-      checkChange(d);
+    cm.on('keydown', function(doc, event){
+      // Should probably be able to do this in a Keymap... but can't seem to get it to work properly
+      // with md-notebook.
+      if(event.keyCode == 27 && self.showCompletions) { // esc
+        self.showCompletions = false;
+        event.preventDefault();
+        event.stopPropagation();
+        $scope.$apply();
+      }
     });
 
     cm.on('blur', function(){
       resetCompletions();
     });
 
+    var changeFlag = false;
+    cm.on('change', function(r, d){
+      changeFlag = true;
+      checkChange(d);
+    });
+
     // If there's a cursor event without an associated change, reset completions.
     cm.on('cursorActivity', function(){
-      if(change) change = false;
+      if(changeFlag) changeFlag = false;
       else resetCompletions();
     });
   }
 
   function checkChange(change) {
     cursorPosition = ipyUtils.to_absolute_cursor_pos(self.cm);
+
+    // if we just autocompleted, don't mess with the state it's set
+    if(autocompleteFlag) {
+      autocompleteFlag = false;
+      return;
+    }
 
     // If the change wasn't an insertion or deletion, don't try to handle it
     if(change.origin != '+delete' && change.origin != '+input') {
@@ -101,8 +163,6 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
       return;
     }
 
-    // Limit automatic updates to 100 results.
-    var changeUpdate = _.partial(updateDisplay, 100, change);
     var text = change.text[0];
     var removed = change.removed[0];
     // when typing a space, or backspacing a bunch, reset completions, but don't update
@@ -114,16 +174,16 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
     else if(_.contains(text, '.') || _.contains(removed, '.')) {
       resetCompletions();
       fetchCompletions()
-        .then(changeUpdate);
+        .then(updateDisplay);
     }
     // If we're reset, we need to get completions then update the display
     else if (resetFlag) {
       fetchCompletions()
-        .then(changeUpdate);
+        .then(updateDisplay);
     }
     // If we're not reset, then we can just update the display.
     else {
-      changeUpdate();
+      updateDisplay();
     }
   }
 
@@ -133,6 +193,8 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
     self.showCompletions = false;
     self.completions = [];
     resetFlag = true;
+    autocompleteFlag = false;
+    self.selected = 0;
   }
 
   function fetchCompletions () {
@@ -164,7 +226,8 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
       self.showCompletions = false;
       return;
     }
-    self.completions = getCompletions();
+    self.fragment = self.cm.getValue().slice(completeResult.cursor_start, cursorPosition);
+    self.completions = getCompletions(self.fragment);
     if(self.completions.length == 0){
       self.showCompletions = false;
       return;
@@ -175,8 +238,7 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
     }
   }
 
-  function getCompletions () {
-    var fragment = self.cm.getValue().slice(completeResult.cursor_start, cursorPosition);
+  function getCompletions (fragment) {
     // Prime the completion map if empty.
     if(_.size(completionMap) == 0) completionMap[''] = completeResult.matches;
     if(completionMap[fragment]) return completionMap[fragment];
@@ -187,13 +249,20 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
       if(key.length > fragment.length) return;
       if(key.length >= match.length && _.startsWith(fragment, key)) match = key;
     });
+    // load the completion map with all fragments between match and fragment
     var previousFragment = fragment.slice(0, match.length);
-    _.forEach(fragment.slice(match.length), function(c){
-      var newFragment = previousFragment + c;
-      var newPos = newFragment.length - 1;
-      completionMap[newFragment] = _.filter(completionMap[previousFragment], function(completion){
-        return completion[newPos] == c;
-      });
+    _.forEach(fragment.slice(match.length), function(ch){
+      var newFragment = previousFragment + ch;
+      completionMap[newFragment] = _(completionMap[previousFragment])
+        // Take only the completions where the next character match
+        .filter(function(completion){
+          return completion[0] == ch;
+        })
+        // drop the first character to get the new completion
+        .map(function(completion){
+          return completion.slice(1);
+        })
+        .value();
       previousFragment = newFragment;
     });
     return completionMap[fragment];
@@ -215,5 +284,59 @@ function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
         updatePosition();
       });
     }
+  }
+
+  function selectNext(num) {
+    if(self.selected == self.completions.length - 1) select(0);
+    else{
+      num = num || 1;
+      select(Math.min(self.completions.length - 1, self.selected + num));
+    }
+  }
+
+  function selectPrevious(num) {
+    if(self.selected == 0) select(self.completions.length - 1);
+    else {
+      num = num || 1;
+      select(Math.max(0, self.selected - num));
+    }
+  }
+
+  var selectTime = null;
+  function select (index, $event) {
+    // Don't handle the mouseenter selection if
+    // it occurs immediately after a keyboard selection
+    var newTime = Date.now();
+    if($event){
+      var diff = newTime - selectTime;
+      selectTime = null;
+      if(diff < 500) return;
+    } else {
+      selectTime = newTime;
+    }
+    self.selected = index;
+    // scroll to the li if it's out of the visible range
+    var li = completionNode.getElementsByTagName('li')[index];
+    var liTop = li.offsetTop,
+      liBottom = liTop + li.clientHeight,
+      ulTop = completionNode.scrollTop,
+      ulHeight = completionNode.clientHeight,
+      ulBottom = ulTop + ulHeight;
+    if (liTop < ulTop) {
+      completionNode.scrollTop = liTop;
+    } else if (liBottom > ulBottom) {
+      completionNode.scrollTop = liBottom - ulHeight;
+    }
+  }
+
+  function autocomplete($event) {
+    if($event){
+      // stop CodeMirror from losing focus when a completion is clicked.
+      $event.preventDefault();
+      $event.stopImmediatePropagation();
+    }
+    self.cm.replaceSelection(self.completions[self.selected]);
+    autocompleteFlag = true;
+    self.showCompletions = false;
   }
 }

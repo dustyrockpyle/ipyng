@@ -384,7 +384,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           // We need a temporary clone to delete the execute/cm attributes from the cell
           // then we'll call angular copy to clone deep the cell while taking care
           // of any ng-repeat identity crises.
-          var temp = _.clone(copied);
+          var temp = _.clone(cell);
           delete temp.execute;
           delete temp.cm;
           delete temp.toggleOutput;
