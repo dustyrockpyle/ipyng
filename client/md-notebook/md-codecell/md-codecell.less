@@ -1,16 +1,11 @@
 @kw-color: #008000;
 @codecell-line-height: 1.21429em;
 
-.md-codecell-font {
-  font-family: monospace;
-  font-size: 14px;
-}
-
 .md-codecell {
   padding: 0;
   margin: 20px;
 
-  .md-codecell-font;
+  .ipy-codearea-font;
   pre {
     margin: 0;
     padding: 0;
@@ -18,7 +13,7 @@
     border-radius: 0;
     display: block;
     word-break: break-all;
-    .md-codecell-font;
+    .ipy-codearea-font;
   }
 
   .prompt {
@@ -35,6 +30,9 @@
     .prompt {
       padding-top: 5px;
       color: navy;
+    }
+    .ipy-codearea{
+      margin: 2px;
     }
   }
 
@@ -68,7 +66,7 @@
     }
   }
   // output grow
-  @md-codecell-maxheight: 80vh;
+  @md-codecell-maxheight: 500px;
   .output-content{
     max-height: @md-codecell-maxheight;
     transition: max-height linear .5s;

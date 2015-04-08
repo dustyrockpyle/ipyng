@@ -10,6 +10,7 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
         selected: '=?'
       },
       link: function (scope, element, attrs, kernel) {
+        var transitionDelay = 100;
         ///// initialize notebook state
         // default notebook if not provided
         if(!scope.notebook) {
@@ -348,16 +349,35 @@ angular.module('md.notebook', ['ipyng', 'md.codecell', 'ngMaterial', 'ng.lodash'
           insertPromise
             .then(function(){
               if(selected != scope.selected) return;
-              cells[selected].execute();
-              cells[selected].cm.getInputField().blur();
               if(event.shiftKey) {
-                commands.selectCell(scope.selected + 1);
+                executeSelectBelow();
               }
               else if(event.altKey) {
-                commands.insertBelow()
+                executeInsert();
+              }
+              else {
+                executeInPlace();
               }
               commands.commandMode();
             });
+        }
+
+        function executeInPlace () {
+          cells[scope.selected].cm.getInputField().blur();
+          cells[scope.selected].execute();
+        }
+
+        function executeInsert () {
+          cells[scope.selected].cm.getInputField().blur();
+          // insert a timeout so output animation doesn't interfere with select animation
+          $timeout(cells[scope.selected].execute, transitionDelay);
+          commands.insertBelow()
+        }
+
+        function executeSelectBelow () {
+          cells[scope.selected].cm.getInputField().blur();
+          $timeout(cells[scope.selected].execute, transitionDelay);
+          commands.selectCell(scope.selected + 1);
         }
 
         function copyCell (cell) {

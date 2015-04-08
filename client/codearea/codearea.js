@@ -20,7 +20,7 @@ function ipyCodeareaDirective() {
   };
 }
 
-function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
+function ipyCodeareaCtrl ($scope, $document, $window, $element, ipyUtils, _) {
   var self = this;
   self.ready = false;
   self.completions = [];
@@ -35,6 +35,14 @@ function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
     completionMap,
     completionNode = _.last($element.find('ul')),
     cmNode;
+
+  // Update position when window resizes
+  $window.addEventListener('resize', applyUpdatePosition);
+  // clean up the completion node from the document body and remove event listener
+  $scope.$on('$destroy', function(){
+    $document[0].body.removeChild(completionNode);
+    $window.removeEventListener('resize', applyUpdatePosition)
+  });
 
   function init(kernel){
     self.kernel = kernel;
@@ -61,25 +69,40 @@ function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
       }
     });
 
+    var change = false;
     cm.on('change', function(r, d){
+      change = true;
       checkChange(d);
     });
 
     cm.on('blur', function(){
-      self.showCompletions = false;
+      resetCompletions();
+    });
+
+    // If there's a cursor event without an associated change, reset completions.
+    cm.on('cursorActivity', function(){
+      if(change) change = false;
+      else resetCompletions();
     });
   }
 
   function checkChange(change) {
     cursorPosition = ipyUtils.to_absolute_cursor_pos(self.cm);
-    // If we've edited multiple lines, just reset all completion data.
+
+    // If the change wasn't an insertion or deletion, don't try to handle it
+    if(change.origin != '+delete' && change.origin != '+input') {
+      resetCompletions();
+      return;
+    }
+
+    // If we've edited multiple lines, just reset all completion data
     if(change.text.length > 1 || change.removed.length > 1) {
       resetCompletions();
       return;
     }
 
     // Limit automatic updates to 100 results.
-    var changeUpdate = _.bind(updateDisplay, null, 100, change);
+    var changeUpdate = _.partial(updateDisplay, 100, change);
     var text = change.text[0];
     var removed = change.removed[0];
     // when typing a space, or backspacing a bunch, reset completions, but don't update
@@ -112,7 +135,6 @@ function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
     resetFlag = true;
   }
 
-
   function fetchCompletions () {
     resetFlag = false;
     completeId += 1;
@@ -136,7 +158,7 @@ function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
       });
   }
 
-  function updateDisplay (limit, change) {
+  function updateDisplay () {
     if(!completeResult) {
       self.completions = [];
       self.showCompletions = false;
@@ -149,14 +171,7 @@ function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
     }
     if(!self.showCompletions) {
       self.showCompletions = true;
-      var cursor = ipyUtils.from_absolute_cursor_pos(self.cm, completeResult.cursor_start);
-      var pos = self.cm.charCoords(cursor, 'window');
-      console.log(cmNode.getBoundingClientRect());
-      self.completionsStyle = {
-        position: 'absolute',
-        top: pos.bottom + 'px',
-        left: pos.left + 'px'
-      };
+      updatePosition();
     }
   }
 
@@ -184,8 +199,21 @@ function ipyCodeareaCtrl ($scope, $document, $element, ipyUtils, _) {
     return completionMap[fragment];
   }
 
-  // clean up the completion node from the document body.
-  $scope.$on('$destroy', function(){
-    $document[0].body.removeChild(completionNode);
-  });
+  function updatePosition () {
+    var cursor = ipyUtils.from_absolute_cursor_pos(self.cm, completeResult.cursor_start);
+    var pos = self.cm.charCoords(cursor, 'window');
+    self.completionsStyle = {
+      position: 'absolute',
+      top: pos.bottom + 'px',
+      left: pos.left + 'px'
+    };
+  }
+
+  function applyUpdatePosition (){
+    if(self.showCompletions) {
+      $scope.$apply(function(){
+        updatePosition();
+      });
+    }
+  }
 }

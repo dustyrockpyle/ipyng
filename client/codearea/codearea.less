@@ -1,4 +1,10 @@
+.ipy-codearea-font {
+  font-family: monospace;
+  font-size: 14px;
+}
+
 .ipy-codearea{
+  .ipy-codearea-font;
   .cm-keyword {
     color: @kw-color;
     font-weight: bold;
@@ -42,10 +48,14 @@
 }
 
 .ipy-completions {
+  .ipy-codearea-font;
   padding: 0;
   background-color: white;
   z-index: 1000;
   list-style: none;
   border: 1px solid black;
-
+  line-height: @codecell-line-height;
+  max-height: 250px;
+  overflow-y: auto;
+  width: 300px;
 }
