@@ -1,8 +1,8 @@
-angular.module('test', [
+angular.module('test-app', [
   'ipyng',
   'templates',
   'ng.lodash',
-  'md.notebook',
+  'ipy.notebook',
   'ipy.psutil',
   'ipy.watch',
   'ipy.debugger',
@@ -10,16 +10,16 @@ angular.module('test', [
   'test.routes'
 ])
   .config(function($provide){
-    $provide.decorator('ipyMessageHandler', function($delegate, $log, ipyMessage){
+    $provide.decorator('$ipyMessageHandler', function($delegate, $log, $ipyMessage){
       var iopub = $delegate.handleIopubMessage;
       var shell = $delegate.handleShellReply;
       $delegate.handleIopubMessage = function(message){
-        $log.log('Iopub ' + ipyMessage.getMessageType(message) + ' Message:');
+        $log.log('Iopub ' + $ipyMessage.getMessageType(message) + ' Message:');
         $log.log(message);
         return iopub(message);
       };
       $delegate.handleShellReply = function(message){
-        $log.log('Shell ' + ipyMessage.getMessageType(message) + ' Message:');
+        $log.log('Shell ' + $ipyMessage.getMessageType(message) + ' Message:');
         $log.log(message);
         return shell(message);
       };
