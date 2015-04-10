@@ -1,84 +1,105 @@
-angular.module('ipyng.messageHandler.websocket', ['ng.lodash'])
-  .factory('ipyWebsocketHandler', function (ipyWebsocket, _, $q) {
-    var websocketHandler = {connections: {}};
-    var onmessageID = 'onmessageCallbacks';
-    var oncloseID = 'oncloseCallbacks';
-    var onopenID = 'onopenCallbacks';
-    websocketHandler.create = function (url) {
+(function(angular){
+  'use strict';
+
+  angular.module('ipyng.messageHandler.websocket', ['ng.lodash'])
+    .factory('$ipyWebsocketHandler', ipyWebsocketHandlerFactory)
+    .factory('$ipyWebsocket', ipyWebsocketFactory);
+
+  function ipyWebsocketHandlerFactory ($ipyWebsocket, _, $q) {
+    var onmessageId = 'onmessageCallbacks';
+    var oncloseId = 'oncloseCallbacks';
+    var onopenId = 'onopenCallbacks';
+
+    var $ipyWebsocketHandler = {
+      connections: {},
+      create: create,
+      getOrCreate: getOrCreate,
+      send: send,
+      unregister: unregister,
+      registerCallback: registerCallback,
+      registerOnMessageCallback: registerOnMessageCallback,
+      registerOnCloseCallback: registerOnCloseCallback,
+      registerOnOpenCallback: registerOnOpenCallback
+    };
+
+    return $ipyWebsocketHandler;
+
+    function create (url) {
       var ws = {};
-      var websocket = new ipyWebsocket(url);
-      ws[onmessageID] = {};
-      ws[oncloseID] = {};
-      ws[onopenID] = {};
+      var websocket = new $ipyWebsocket(url);
+      ws[onmessageId] = {};
+      ws[oncloseId] = {};
+      ws[onopenId] = {};
       websocket.onmessage = function (event) {
-        callAllCallbacks(url, onmessageID, event);
+        callAllCallbacks(url, onmessageId, event);
       };
       websocket.onclose = function (event) {
-        callAllCallbacks(url, oncloseID, event);
+        callAllCallbacks(url, oncloseId, event);
       };
       websocket.onopen = function (event) {
-        callAllCallbacks(url, onopenID, event);
+        callAllCallbacks(url, onopenId, event);
       };
 
-      websocketHandler.connections[url] = ws;
+      $ipyWebsocketHandler.connections[url] = ws;
       var deferred = $q.defer();
       ws.websocket = deferred.promise;
-      websocketHandler.registerCallback(url, onopenID, function(){
+      $ipyWebsocketHandler.registerCallback(url, onopenId, function(){
         deferred.resolve(websocket);
       });
-      websocketHandler.registerCallback(url, oncloseID, function(){
+      $ipyWebsocketHandler.registerCallback(url, oncloseId, function(){
         ws.websocket = $q.reject("Connection closed.");
       });
       return ws;
-    };
+    }
 
-    websocketHandler.getOrCreate = function (url) {
-      var result = websocketHandler.connections[url];
+    function getOrCreate (url) {
+      var result = $ipyWebsocketHandler.connections[url];
       if (result === undefined) {
-        return websocketHandler.create(url);
+        return $ipyWebsocketHandler.create(url);
       }
       return result;
-    };
+    }
 
-    var callAllCallbacks = function (url, callback_type, event) {
-      var callbacks = websocketHandler.connections[url][callback_type];
+    function callAllCallbacks (url, callback_type, event) {
+      var callbacks = $ipyWebsocketHandler.connections[url][callback_type];
       _.forEach(callbacks, function(callback){
         callback(event, url);
       });
-    };
+    }
 
-    websocketHandler.send = function (url, message) {
-      return websocketHandler.getOrCreate(url).websocket
+    function send (url, message) {
+      return $ipyWebsocketHandler.getOrCreate(url).websocket
         .then(function (websocket){
           websocket.send(message);
         });
-    };
+    }
 
-    websocketHandler.unregister = function (url, callback_type, callback_id) {
-      delete websocketHandler.getOrCreate(url)[callback_type][callback_id];
-    };
+    function unregister (url, callback_type, callback_id) {
+      delete $ipyWebsocketHandler.getOrCreate(url)[callback_type][callback_id];
+    }
 
-    websocketHandler.registerCallback = function (url, callback_type, callback) { //Returns function to unregister callback.
+    function registerCallback (url, callback_type, callback) { //Returns function to unregister callback.
       var callback_id = _.uniqueId();
-      websocketHandler.getOrCreate(url)[callback_type][callback_id] = callback;
+      $ipyWebsocketHandler.getOrCreate(url)[callback_type][callback_id] = callback;
       return function () {
-        websocketHandler.unregister(url, callback_type, callback_id);
+        $ipyWebsocketHandler.unregister(url, callback_type, callback_id);
       };
-    };
+    }
 
-    websocketHandler.registerOnMessageCallback = function (url, callback) {
-      return websocketHandler.registerCallback(url, onmessageID, callback);
-    };
-    websocketHandler.registerOnCloseCallback = function (url, callback) {
-      return websocketHandler.registerCallback(url, oncloseID, callback);
-    };
-    websocketHandler.registerOnOpenCallback = function (url, callback) {
-      return websocketHandler.registerCallback(url, onopenID, callback);
-    };
+    function registerOnMessageCallback (url, callback) {
+      return $ipyWebsocketHandler.registerCallback(url, onmessageId, callback);
+    }
 
-    return websocketHandler;
-  })
-  .factory('ipyWebsocket', function () {
+    function registerOnCloseCallback (url, callback) {
+      return $ipyWebsocketHandler.registerCallback(url, oncloseId, callback);
+    }
+
+    function registerOnOpenCallback (url, callback) {
+      return $ipyWebsocketHandler.registerCallback(url, onopenId, callback);
+    }
+  }
+
+  function ipyWebsocketFactory () {
     if (typeof(WebSocket) !== 'undefined') {
       return WebSocket;
     } else if (typeof(MozWebSocket) !== 'undefined') {
@@ -87,5 +108,5 @@ angular.module('ipyng.messageHandler.websocket', ['ng.lodash'])
       alert('Your browser does not have WebSocket support, please try Chrome, Safari or Firefox ≥ 6. Firefox 4 and 5 are also supported by you have to enable WebSockets in about:config.');
       return null;
     }
-  })
-;
+  }
+})(angular);

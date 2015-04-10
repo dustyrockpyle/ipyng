@@ -1,0 +1,5 @@
+<div class="ipy-psutil">
+    <button class="btn btn-primary" ng-click="start()" ng-if="!started">Start CPU Poll</button>
+    <button class="btn btn-danger" ng-click="stop()" ng-if="started">Stop CPU Poll</button>
+    <span class="cpu-percent">CPU percent: </span><span class="psutil-result" ng-show="cpu_percent">{{ cpu_percent }}%</span>
+</div>

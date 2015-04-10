@@ -1,0 +1,96 @@
+@kw-color: #008000;
+@codecell-line-height: 1.21429em;
+
+.ipy-codecell {
+  padding: 0;
+  margin: 20px;
+  background-color: rgba(255,255,255,1);
+
+  .ipy-codearea-font;
+  pre {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    display: block;
+    word-break: break-all;
+    .ipy-codearea-font;
+  }
+
+  .prompt {
+    min-width: 11ex;
+    padding-right: .4em;
+    text-align: right;
+  }
+
+  .input, .output {
+    margin: 10px;
+  }
+
+  .input {
+    .prompt {
+      padding-top: 5px;
+      color: navy;
+    }
+    .ipy-codearea{
+      margin: 2px;
+    }
+  }
+
+  .output {
+    .prompt {
+      color: darkred;
+    }
+    .display-area {
+      pre{
+        background: none;
+      }
+    }
+  }
+
+  .output-container {
+    .md-button.md-default-theme {
+      margin-top: -10px;
+      background-color: transparent;
+      &:hover {
+        background-color: #f6f6f6;
+      }
+    }
+    .toggle-icon{
+      display: block;
+      vertical-align: middle;
+      transform: rotate(0deg);
+      transition: transform 0.2s ease-in-out;
+      &.toggled{
+        transform: rotate(180deg);
+      }
+    }
+  }
+  // output grow
+  @ipy-codecell-maxheight: 500px;
+  .output-content{
+    max-height: @ipy-codecell-maxheight;
+    transition: max-height linear .5s;
+    overflow-y: auto;
+    &.ng-hide{
+      overflow-y: hidden;
+      max-height: 0;
+    }
+    &.ng-hide-add,
+    &.ng-hide-remove {
+      overflow-y: hidden;
+      max-height: 0;
+    }
+    &.ng-hide-remove.ng-hide-remove-active,
+    &.ng-hide-add {
+      overflow-y: hidden;
+      max-height: @ipy-codecell-maxheight;
+    }
+    &.ng-hide-add.ng-hide-add-active {
+      overflow-y: hidden;
+      max-height: 0;
+    }
+    .display-line{
+    }
+  }
+}

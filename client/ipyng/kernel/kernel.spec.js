@@ -1,8 +1,8 @@
-describe("ipyKernel", function () {
+describe("$ipyKernel", function () {
   beforeEach(module('ipyng.messageHandler'));
   beforeEach(module('ipyng.kernel'));
 
-  var $httpBackend, $q, $rootScope, ipyMessage;
+  var $httpBackend, $q, $rootScope, $ipyMessage;
   var messageHandlerMock = function () {
     var mock = {};
 
@@ -14,7 +14,7 @@ describe("ipyKernel", function () {
     };
 
     mock.resolve = function (result) {
-      mock.notify(ipyMessage.makeStatusReply('idle', ipyMessage.getParentHeader(result)));
+      mock.notify($ipyMessage.makeStatusReply('idle', $ipyMessage.getParentHeader(result)));
       mock.deferred.resolve(result);
     };
 
@@ -28,8 +28,8 @@ describe("ipyKernel", function () {
       mock.message = message;
       mock.iopubHandler = iopubHandler;
       mock.stdinHandler = stdinHandler;
-      if(ipyMessage.getMessageType(message) == 'kernel_info_request')
-        mock.resolve(ipyMessage.makeMessage('kernel_info_reply', {}, ipyMessage.getParentHeader(message)));
+      if($ipyMessage.getMessageType(message) == 'kernel_info_request')
+        mock.resolve($ipyMessage.makeMessage('kernel_info_reply', {}, $ipyMessage.getParentHeader(message)));
       return mock.deferred.promise;
     };
 
@@ -45,15 +45,15 @@ describe("ipyKernel", function () {
   };
 
   beforeEach(module(function ($provide) {
-    $provide.factory("ipyMessageHandler", messageHandlerMock);
+    $provide.factory("$ipyMessageHandler", messageHandlerMock);
   }));
 
-  beforeEach(inject(function (_$httpBackend_, _$q_, ipyMessageHandler, _$rootScope_, _ipyMessage_) {
+  beforeEach(inject(function (_$httpBackend_, _$q_, $ipyMessageHandler, _$rootScope_, _$ipyMessage_) {
     $httpBackend = _$httpBackend_;
     $q = _$q_;
     $rootScope = _$rootScope_;
-    ipyMessage = _ipyMessage_;
-    ipyMessageHandler.reset();
+    $ipyMessage = _$ipyMessage_;
+    $ipyMessageHandler.reset();
   }));
 
   var kernel1Id = 'kernel1';
@@ -65,10 +65,10 @@ describe("ipyKernel", function () {
   var rejected = 2;
 
   describe('retrieveKernels', function(){
-    it("should return a list of kernels from /api/kernels/", inject(function (ipyKernel) {
+    it("should return a list of kernels from /api/kernels/", inject(function ($ipyKernel) {
       var kernels;
       $httpBackend.expectGET('/api/kernels/').respond([{id: kernel1Guid}, {id: kernel2Guid}]);
-      ipyKernel.retrieveStartedKernels().then(function(_kernels){
+      $ipyKernel.retrieveStartedKernels().then(function(_kernels){
         kernels = _kernels;
       });
       $httpBackend.flush();
@@ -78,18 +78,18 @@ describe("ipyKernel", function () {
   });
 
   describe("api function", function () {
-    beforeEach(inject(function(ipyMessageHandler){
+    beforeEach(inject(function($ipyMessageHandler){
       $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel1Guid});
     }));
 
     describe('startKernel', function(){
-      it("should post to /api/startkernel/ when starting kernel", inject(function (ipyKernel) {
-        ipyKernel.startKernel(kernel1Id);
+      it("should post to /api/startkernel/ when starting kernel", inject(function ($ipyKernel) {
+        $ipyKernel.startKernel(kernel1Id);
       }));
 
-      it("should resolve the kernel promise after response from /api/startkernel/", inject(function (ipyKernel) {
+      it("should resolve the kernel promise after response from /api/startkernel/", inject(function ($ipyKernel) {
         var kernelGuid;
-        ipyKernel.startKernel(kernel1Id)
+        $ipyKernel.startKernel(kernel1Id)
           .then(function(kernel){
             kernelGuid = kernel.guid;
           });
@@ -101,31 +101,31 @@ describe("ipyKernel", function () {
 
     describe('interruptKernel', function(){
       it("should post to /api/kernels/interrupt/{kernelGuid} when interrupting a kernel", inject(
-        function (ipyKernel) {
-          ipyKernel.startKernel(kernel1Id);
+        function ($ipyKernel) {
+          $ipyKernel.startKernel(kernel1Id);
           $httpBackend.flush();
           $httpBackend.expectPOST('/api/kernels/interrupt/' + kernel1Guid).respond({});
-          ipyKernel.interruptKernel(kernel1Id);
+          $ipyKernel.interruptKernel(kernel1Id);
           $httpBackend.flush();
         }
       ));
     });
 
     describe('restartKernel', function(){
-      it("should post to /api/kernels/restart/{kernelGuid} when restarting a kernel", inject(function (ipyKernel) {
-        ipyKernel.startKernel(kernel1Id);
+      it("should post to /api/kernels/restart/{kernelGuid} when restarting a kernel", inject(function ($ipyKernel) {
+        $ipyKernel.startKernel(kernel1Id);
         $httpBackend.flush();
         $httpBackend.expectPOST('/api/kernels/restart/' + kernel1Guid).respond({});
-        ipyKernel.restartKernel(kernel1Id);
+        $ipyKernel.restartKernel(kernel1Id);
         $httpBackend.flush();
       }));
     });
   });
 
   describe("kernel messages", function(){
-    beforeEach(inject(function(ipyKernel){
+    beforeEach(inject(function($ipyKernel){
       $httpBackend.expectPOST('/api/startkernel/').respond({id: kernel1Guid});
-      ipyKernel.startKernel(kernel1Id);
+      $ipyKernel.startKernel(kernel1Id);
       $httpBackend.flush();
     }));
 
@@ -141,49 +141,49 @@ describe("ipyKernel", function () {
     };
 
     describe("execute", function () {
-      beforeEach(inject(function(ipyKernel, ipyMessageHandler){
+      beforeEach(inject(function($ipyKernel, $ipyMessageHandler){
         stdout = [];
-        promise = ipyKernel.execute(kernel1Id, code, stdoutHandler, false, false, true);
+        promise = $ipyKernel.execute(kernel1Id, code, stdoutHandler, false, false, true);
         $rootScope.$apply();
-        sentMessage = ipyMessageHandler.message;
-        sentContent = ipyMessage.getContent(sentMessage);
-        sentHeader = ipyMessage.getHeader(sentMessage);
+        sentMessage = $ipyMessageHandler.message;
+        sentContent = $ipyMessage.getContent(sentMessage);
+        sentHeader = $ipyMessage.getHeader(sentMessage);
       }));
 
       it("should send a shell request to the specified kernel containing the sent code",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
-          expect(ipyMessageHandler.kernelId).toEqual(kernel1Guid);
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler) {
+          expect($ipyMessageHandler.kernelId).toEqual(kernel1Guid);
           expect(sentContent.code).toEqual(code);
         }));
 
-      it("should call stdoutHandler with iopub stream messages", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
+      it("should call stdoutHandler with iopub stream messages", inject(function($ipyKernel, $ipyMessage, $ipyMessageHandler){
         var text = 'somemessage';
-        var firstMessage = ipyMessage.makeIopubStream(text, sentHeader);
-        ipyMessageHandler.iopubHandler(firstMessage);
+        var firstMessage = $ipyMessage.makeIopubStream(text, sentHeader);
+        $ipyMessageHandler.iopubHandler(firstMessage);
         $rootScope.$apply();
         expect(stdout[0]).toEqual(text);
         var text2 = 'somemessage2';
-        var secondMessage = ipyMessage.makeIopubStream(text2, sentHeader);
-        ipyMessageHandler.iopubHandler(secondMessage);
+        var secondMessage = $ipyMessage.makeIopubStream(text2, sentHeader);
+        $ipyMessageHandler.iopubHandler(secondMessage);
         $rootScope.$apply();
         expect(stdout[1]).toEqual(text2);
       }));
 
-      it("should resolve with the execute results", inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
+      it("should resolve with the execute results", inject(function($ipyKernel, $ipyMessage, $ipyMessageHandler){
         var executeResult;
         promise.then(function(result){
           executeResult = result;
         });
-        var response = ipyMessage.makeExecuteReply('ok', 1, {}, []);
-        ipyMessageHandler.resolve(response);
+        var response = $ipyMessage.makeExecuteReply('ok', 1, {}, []);
+        $ipyMessageHandler.resolve(response);
 
         var out = {data: {'text/plain': 'the output'}};
-        var outMessage = ipyMessage.makeExecuteResult(out, 1, {}, sentHeader);
-        ipyMessageHandler.iopubHandler(outMessage);
+        var outMessage = $ipyMessage.makeExecuteResult(out, 1, {}, sentHeader);
+        $ipyMessageHandler.iopubHandler(outMessage);
 
         var display = {data: {'image/png': 'arbitrarypng'}};
-        var displayMessage = ipyMessage.makeIopubDisplay(display, sentHeader);
-        ipyMessageHandler.iopubHandler(displayMessage);
+        var displayMessage = $ipyMessage.makeIopubDisplay(display, sentHeader);
+        $ipyMessageHandler.iopubHandler(displayMessage);
         $rootScope.$apply();
 
         expect(executeResult.text).toEqual(out['text/plain']);
@@ -191,7 +191,7 @@ describe("ipyKernel", function () {
       }));
 
       it("should send input_reply messages for stdin requests",
-        inject(function(ipyKernel, ipyMessage, ipyMessageHandler){
+        inject(function($ipyKernel, $ipyMessage, $ipyMessageHandler){
           var firstResult, secondResult, thirdResult;
           var firstRequest = 'What do you get when you multiply 6 by 9?';
           var firstResponse = '42';
@@ -212,18 +212,18 @@ describe("ipyKernel", function () {
             });
 
           var response;
-          ipyMessageHandler.stdinHandler(ipyMessage.makeInputRequest(firstRequest, null, sentHeader))
+          $ipyMessageHandler.stdinHandler($ipyMessage.makeInputRequest(firstRequest, null, sentHeader))
             .then(function(stdinResponse){
-              response = ipyMessage.getContent(stdinResponse).value;
+              response = $ipyMessage.getContent(stdinResponse).value;
             });
           $rootScope.$apply();
           expect(firstResult.isRequest).toBeTruthy();
           expect(firstResult.prompt).toEqual(firstRequest);
           expect(response).toEqual(firstResponse);
 
-          ipyMessageHandler.stdinHandler(ipyMessage.makeInputRequest(secondRequest, null, sentHeader))
+          $ipyMessageHandler.stdinHandler($ipyMessage.makeInputRequest(secondRequest, null, sentHeader))
             .then(function(stdinResponse){
-              response =  ipyMessage.getContent(stdinResponse).value;
+              response =  $ipyMessage.getContent(stdinResponse).value;
             });
           $rootScope.$apply();
           expect(secondResult.isRequest).toBeTruthy();
@@ -231,46 +231,46 @@ describe("ipyKernel", function () {
           expect(response).toEqual(secondResponse);
 
 
-          var resultMessage = ipyMessage.makeExecuteResult({'text/plain': executeResult}, 1, {}, sentHeader);
-          ipyMessageHandler.iopubHandler(resultMessage);
-          ipyMessageHandler.resolve(ipyMessage.makeExecuteReply('ok', 1, []));
+          var resultMessage = $ipyMessage.makeExecuteResult({'text/plain': executeResult}, 1, {}, sentHeader);
+          $ipyMessageHandler.iopubHandler(resultMessage);
+          $ipyMessageHandler.resolve($ipyMessage.makeExecuteReply('ok', 1, []));
           $rootScope.$apply();
           expect(thirdResult.text).toEqual(executeResult);
         }));
 
       it("should reject the promise when the status of the message is error",
-        inject(function(ipyMessageHandler){
+        inject(function($ipyMessageHandler){
           var executeError = null;
           var traceback = ['line1', 'line2'];
           promise.catch(function(error){
             executeError = error;
           });
-          var response = ipyMessage.makeExecuteReply('error', 1, {}, [], null, traceback);
-          ipyMessageHandler.resolve(response);
+          var response = $ipyMessage.makeExecuteReply('error', 1, {}, [], null, traceback);
+          $ipyMessageHandler.resolve(response);
           $rootScope.$apply();
           expect(executeError.traceback).toEqual(traceback);
         }));
 
       it("should pass appropriate options to the execute request",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
-          ipyKernel.execute(kernel1Id, 'some code', stdoutHandler, true, true, true);
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler) {
+          $ipyKernel.execute(kernel1Id, 'some code', stdoutHandler, true, true, true);
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.silent).toBeTruthy();
           expect(content.store_history).toBeTruthy();
           expect(content.allow_stdin).toBeTruthy();
 
-          ipyKernel.execute(kernel1Id, 'some more code', null, false, false, false);
+          $ipyKernel.execute(kernel1Id, 'some more code', null, false, false, false);
           $rootScope.$apply();
-          content = ipyMessage.getContent(ipyMessageHandler.message);
+          content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.silent).toBeFalsy();
           expect(content.store_history).toBeFalsy();
           expect(content.allow_stdin).toBeFalsy();
 
           //Test defaults
-          ipyKernel.execute(kernel1Id, 'even more code');
+          $ipyKernel.execute(kernel1Id, 'even more code');
           $rootScope.$apply();
-          content = ipyMessage.getContent(ipyMessageHandler.message);
+          content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.silent).toBeFalsy();
           expect(content.store_history).toBeTruthy();
           expect(content.allow_stdin).toBeFalsy();
@@ -280,21 +280,21 @@ describe("ipyKernel", function () {
 
     describe("evaluate", function () {
       it("should return the results of the expression in a resolved promise",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler) {
           var expression = "expression to evaluate";
           var evaluateResult = null;
-          ipyKernel.evaluate(kernel1Id, expression).then(function (result) {
+          $ipyKernel.evaluate(kernel1Id, expression).then(function (result) {
             evaluateResult = result;
           });
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.user_expressions[0]).toEqual(expression);
 
           var expressionResult = "this is the result of the expression";
           var user_expressions = {};
           user_expressions[0] = {data: {'text/plain': expressionResult}};
-          var message = ipyMessage.makeExecuteReply('ok', 1, user_expressions);
-          ipyMessageHandler.resolve(message);
+          var message = $ipyMessage.makeExecuteReply('ok', 1, user_expressions);
+          $ipyMessageHandler.resolve(message);
           $rootScope.$apply();
           expect(evaluateResult.text).toEqual(expressionResult);
         })
@@ -304,72 +304,72 @@ describe("ipyKernel", function () {
     describe("inspect", function () {
       it("should create an inspect message with code, cursorPosition, and detail level then " +
         "return the result of the response in a promise",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler) {
           var code = 'some code';
           var cursorPosition = code.length;
           var detailLevel = 1;
           var inspectResult = null;
-          ipyKernel.inspect(kernel1Id, code, cursorPosition, detailLevel).then(function (result) {
+          $ipyKernel.inspect(kernel1Id, code, cursorPosition, detailLevel).then(function (result) {
             inspectResult = result;
           });
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.code).toEqual(code);
           expect(content.cursor_pos).toEqual(cursorPosition);
           expect(content.detail_level).toEqual(detailLevel);
-          var response = ipyMessage.makeInspectReply('ok', {'application/json': 'result'}, {},
-            ipyMessage.getHeader(ipyMessageHandler.message));
-          ipyMessageHandler.resolve(response);
+          var response = $ipyMessage.makeInspectReply('ok', {'application/json': 'result'}, {},
+            $ipyMessage.getHeader($ipyMessageHandler.message));
+          $ipyMessageHandler.resolve(response);
           $rootScope.$apply();
-          expect(ipyMessage.getContent(response)).toEqual(inspectResult);
+          expect($ipyMessage.getContent(response)).toEqual(inspectResult);
         })
       );
     });
 
     describe("complete", function () {
       it("should create a complete message with code and cursorPosition, and return the response in a promise",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler) {
           var code = 'some code';
           var cursorPosition = code.length;
           var completeResult = null;
-          ipyKernel.inspect(kernel1Id, code, cursorPosition).then(function (result) {
+          $ipyKernel.inspect(kernel1Id, code, cursorPosition).then(function (result) {
             completeResult = result;
           });
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.code).toEqual(code);
           expect(content.cursor_pos).toEqual(cursorPosition);
-          var response = ipyMessage.makeInspectReply('ok', {'application/json': 'result'}, {},
-            ipyMessage.getHeader(ipyMessageHandler.message));
-          ipyMessageHandler.resolve(response);
+          var response = $ipyMessage.makeInspectReply('ok', {'application/json': 'result'}, {},
+            $ipyMessage.getHeader($ipyMessageHandler.message));
+          $ipyMessageHandler.resolve(response);
           $rootScope.$apply();
-          expect(ipyMessage.getContent(response)).toEqual(completeResult);
+          expect($ipyMessage.getContent(response)).toEqual(completeResult);
         })
       );
     });
 
     describe("historySearch", function () {
       it("should create a search history message and return the response in a promise",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler) {
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler) {
           var pattern = 'the pattern';
           var numResults = 5;
           var historyResult = null;
-          ipyKernel.historySearch(kernel1Id, 'the pattern', numResults).then(function (result) {
+          $ipyKernel.historySearch(kernel1Id, 'the pattern', numResults).then(function (result) {
             historyResult = result;
           });
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
-          var header = ipyMessage.getHeader(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
+          var header = $ipyMessage.getHeader($ipyMessageHandler.message);
           expect(content.pattern).toEqual(pattern);
           expect(content.n).toEqual(numResults);
-          var session = ipyMessage.session;
+          var session = $ipyMessage.session;
           var history = [
             [session, 1, ['first input', 'first output']],
             [session, 2, ['second input', 'second output']],
             [session, 3, ['third input', 'third output']]
           ];
-          var response = ipyMessage.makeHistoryReply(history, header);
-          ipyMessageHandler.resolve(response);
+          var response = $ipyMessage.makeHistoryReply(history, header);
+          $ipyMessageHandler.resolve(response);
           $rootScope.$apply();
           expect(historyResult[0].input).toEqual(history[0][2][0]);
           expect(historyResult[0].output).toEqual(history[0][2][1]);
@@ -383,26 +383,26 @@ describe("ipyKernel", function () {
 
     describe("historyRange", function () {
       it("should create a range history message and return the response in a promise",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler, $rootScope) {
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler, $rootScope) {
           var start = 1;
           var stop = 3;
           var getOutput = false;
           var historyResult = null;
-          ipyKernel.historyRange(kernel1Id, start, stop, getOutput).then(function (result) {
+          $ipyKernel.historyRange(kernel1Id, start, stop, getOutput).then(function (result) {
             historyResult = result;
           });
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.start).toEqual(start);
           expect(content.stop).toEqual(stop);
-          var session = ipyMessage.session;
+          var session = $ipyMessage.session;
           var history = [
             [session, 1, 'first input'],
             [session, 2, 'second input'],
             [session, 3, 'third input']
           ];
-          var response = ipyMessage.makeHistoryReply(history);
-          ipyMessageHandler.resolve(response);
+          var response = $ipyMessage.makeHistoryReply(history);
+          $ipyMessageHandler.resolve(response);
           $rootScope.$apply();
           expect(historyResult[0].input).toEqual(history[0][2]);
           expect(historyResult[0].lineNumber).toEqual(history[0][1]);
@@ -415,24 +415,24 @@ describe("ipyKernel", function () {
 
     describe("historyTail", function () {
       it("should create a tail history message and return the response in a promise",
-        inject(function (ipyKernel, ipyMessage, ipyMessageHandler, $rootScope) {
+        inject(function ($ipyKernel, $ipyMessage, $ipyMessageHandler, $rootScope) {
           var lastN = 3;
           var getOutput = false;
           var historyResult = null;
-          ipyKernel.historyTail(kernel1Id, lastN, getOutput).then(function (result) {
+          $ipyKernel.historyTail(kernel1Id, lastN, getOutput).then(function (result) {
             historyResult = result;
           });
           $rootScope.$apply();
-          var content = ipyMessage.getContent(ipyMessageHandler.message);
+          var content = $ipyMessage.getContent($ipyMessageHandler.message);
           expect(content.n).toEqual(lastN);
-          var session = ipyMessage.session;
+          var session = $ipyMessage.session;
           var history = [
             [session, 1, 'first input'],
             [session, 2, 'second input'],
             [session, 3, 'third input']
           ];
-          var response = ipyMessage.makeHistoryReply(history);
-          ipyMessageHandler.resolve(response);
+          var response = $ipyMessage.makeHistoryReply(history);
+          $ipyMessageHandler.resolve(response);
           $rootScope.$apply();
           expect(historyResult[0].input).toEqual(history[0][2]);
           expect(historyResult[0].lineNumber).toEqual(history[0][1]);

@@ -1,0 +1,18 @@
+<div class="test-main" kernel="test">
+    <button class="btn btn-primary" ui-sref="debug">Debug Post-Mortem</button>
+    <ipy-codecell cell="exception"></ipy-codecell>
+    <button class="btn btn-primary" ng-click="exception.execute()">Run</button>
+    <br>
+    <ipy-codecell cell="widget"></ipy-codecell>
+    <button class="btn btn-primary" ng-click="widget.execute()">Run</button>
+    <ipy-codecell cell="cellception"></ipy-codecell>
+    <button class="btn btn-primary" ng-click="cellception.execute()">Run</button>
+    <ipy-codecell cell="image"></ipy-codecell>
+    <button class="btn btn-primary" ng-click="image.execute()">Run</button>
+    <br>
+    <span>psutil: </span>
+    <ipy-psutil></ipy-psutil>
+    <br>
+    <span>watch: </span>
+    <ipy-watch></ipy-watch>
+</div>

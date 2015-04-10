@@ -7,7 +7,7 @@ paths:
     client: &client !join [*root, client/]
     build: &build !join [*root, build/]
     vendor: &vendor !join [*root, gulp/vendor/]
-    index: &index !join [*build, test/index.html]
+    index: &index !join [*build, test-app/index.html]
     static: *root
 
 server:
@@ -31,7 +31,7 @@ vendor_scripts: &vendor_scripts !prepend
     - angular-animate/angular-animate.js
     - angular-aria/angular-aria.js
 
-templates_dest: &templates_dest !join [*build, test/templates.js]
+templates_dest: &templates_dest !join [*build, test-app/templates.js]
 
 client_scripts: &client_scripts
     - !join [*client, "**/!(*.spec)*.js"]
@@ -40,17 +40,17 @@ client_scripts: &client_scripts
 client_js: &client_js
     - !join [*client, "**/*.js"]
 
-css_dest: &css_dest !join [*build, test/styles.css]
+css_dest: &css_dest !join [*build, test-app/styles.css]
 
 lint:
     src: *client_js
     watch: *client_js
 
 html:
-    src: !join [*client, test/index.html]
+    src: !join [*client, test-app/index.html]
     dest: *index
     static_url: *static_url
-    main: test
+    main: test-app
     includes: !flatten
         - *vendor_scripts
         - *client_scripts
@@ -60,7 +60,7 @@ html:
         - !join [*vendor, angular-material/angular-material.css]
     watch: !flatten
         - *client_scripts
-        - !join [*client, test/index.html]
+        - !join [*client, test-app/index.html]
 
 less:
     src: !join [*client, base.less]

@@ -1,0 +1,24 @@
+<div class="ipy-debugger">
+    <div ng-show="context.error">
+        <span>Error while starting debugger:</span>
+        <ipy-outputarea output="context.error"></ipy-outputarea>
+    </div>
+    <div ng-if="debugger.started">
+        <div class="top-row">
+            <ui-codemirror class="source" ui-codemirror-opts="cmOptions" ng-model="debugger.source"></ui-codemirror>
+        </div>
+
+        <div class="bottom-row">
+            <div class="stack">
+                <button class="btn frame" ng-click="goToFrame($index)"
+                        ng-class="{'btn-primary': $index==debugger.currentFrame, 'btn-danger': $index!=debugger.currentFrame}"
+                        ng-repeat="frame in debugger.stack"
+                        >{{ frame.filename }} {{ frame.function }}</button>
+            </div>
+
+            <div class="locals">
+                <ipy-watch immutable expressions="debugger.locals" refresh="context.refreshLocals"></ipy-watch>
+            </div>
+        </div>
+    </div>
+</div>

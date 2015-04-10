@@ -1,4 +1,4 @@
-describe("ipyWebsocketHandler", function() {
+describe("$ipyWebsocketHandler", function() {
   beforeEach(module('ipyng.messageHandler.websocket'));
   beforeEach(module('ipyng.utils'));
 
@@ -29,15 +29,15 @@ describe("ipyWebsocketHandler", function() {
   beforeEach(module(function($provide) {
     websockets = [];
     lastSent = '';
-    $provide.factory("ipyWebsocket", websocketMock);
+    $provide.factory("$ipyWebsocket", websocketMock);
   }));
 
-  it("should create a websocket with given url", inject(function(ipyWebsocketHandler, $rootScope, $timeout) {
-    ipyWebsocketHandler.getOrCreate("someUrl");
+  it("should create a websocket with given url", inject(function($ipyWebsocketHandler, $rootScope, $timeout) {
+    $ipyWebsocketHandler.getOrCreate("someUrl");
     expect(websockets[0].url).toEqual("someUrl");
-    ipyWebsocketHandler.getOrCreate("someOtherUrl");
+    $ipyWebsocketHandler.getOrCreate("someOtherUrl");
     expect(websockets[1].url).toEqual("someOtherUrl");
-    var ws = ipyWebsocketHandler.getOrCreate("someUrl");
+    var ws = $ipyWebsocketHandler.getOrCreate("someUrl");
     var websocket;
     ws.websocket.then(function(_websocket){
       websocket = _websocket;
@@ -48,12 +48,12 @@ describe("ipyWebsocketHandler", function() {
     expect(websockets.length).toEqual(2);
   }));
 
-  it("should call websocket send", inject(function(ipyWebsocketHandler, $timeout, $rootScope) {
-    ipyWebsocketHandler.send("someUrl", "someMessage");
+  it("should call websocket send", inject(function($ipyWebsocketHandler, $timeout, $rootScope) {
+    $ipyWebsocketHandler.send("someUrl", "someMessage");
     $timeout.flush(50);
     $rootScope.$apply();
     expect(lastSent).toEqual("someMessage");
-    ipyWebsocketHandler.send("someOtherUrl", "someOtherMessage");
+    $ipyWebsocketHandler.send("someOtherUrl", "someOtherMessage");
     $timeout.flush(50);
     $rootScope.$apply();
     expect(lastSent).toEqual("someOtherMessage");
@@ -61,9 +61,9 @@ describe("ipyWebsocketHandler", function() {
     expect(websockets[1].url).toEqual("someOtherUrl");
   }));
 
-  it("should return a promise that's resolved after send", inject(function(ipyWebsocketHandler, $timeout, $rootScope){
+  it("should return a promise that's resolved after send", inject(function($ipyWebsocketHandler, $timeout, $rootScope){
     var resolved = false;
-    ipyWebsocketHandler.send("someUrl", "someMessage")
+    $ipyWebsocketHandler.send("someUrl", "someMessage")
       .then(function(){
         resolved = true;
       });
@@ -72,16 +72,16 @@ describe("ipyWebsocketHandler", function() {
     expect(resolved).toBeTruthy();
   }));
 
-  it("should call all registered callbacks", inject(function(ipyWebsocketHandler, $timeout, $rootScope) {
+  it("should call all registered callbacks", inject(function($ipyWebsocketHandler, $timeout, $rootScope) {
     var called1 = "";
     var called2 = "";
-    ipyWebsocketHandler.registerOnMessageCallback("someUrl", function(e){
+    $ipyWebsocketHandler.registerOnMessageCallback("someUrl", function(e){
       called1 = e;
     });
-    ipyWebsocketHandler.registerOnMessageCallback("someUrl", function(e){
+    $ipyWebsocketHandler.registerOnMessageCallback("someUrl", function(e){
       called2 = "arbitrary";
     });
-    var ws = ipyWebsocketHandler.getOrCreate("someUrl");
+    var ws = $ipyWebsocketHandler.getOrCreate("someUrl");
     ws.websocket.then(function(websocket){
       websocket.onmessage("theMessage");
     });

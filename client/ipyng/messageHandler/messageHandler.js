@@ -1,38 +1,57 @@
-angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng.utils', 'ng.lodash'])
-  .factory('ipySessionId', function(_){
-    return _.uniqueId();
-  })
-  .factory('ipyUsername', function(){
-    return '';
-  })
-  .factory('ipyMessageHandler', function (ipyWebsocketHandler, ipyMessage, ipyKernelPath, ipyUtils,
-                                          ipySessionId, $location, $q, _, $timeout, $rootScope) {
-    var ipyMessageHandler = {};
+(function(angular){
+  'use strict';
 
-    ipyMessageHandler.channelUrl = function (kernelGuid) {
-      return ipyUtils.url_path_join("ws://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid,
-        'channels?session_id=' + ipySessionId);
+  angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng.utils', 'ng.lodash'])
+    .factory('ipySessionId', function(_){
+      return _.uniqueId();
+    })
+    .factory('ipyUsername', function(){
+      return '';
+    })
+    .value('ipyKernelPath', 'api/kernels/')
+    .factory('$ipyMessageHandler', ipyMessageHandlerFactory)
+    .factory('$ipyMessage', ipyMessageFactory);
+
+  function ipyMessageHandlerFactory ($ipyWebsocketHandler, $ipyMessage, ipyKernelPath, $ipyUtils,
+                               ipySessionId, $location, $q, _, $timeout, $rootScope) {
+    var $ipyMessageHandler = {
+      channelUrl: channelUrl,
+      httpUrl: httpUrl,
+      sendShellRequest: sendShellRequest,
+      handleShellReply: handleShellReply,
+      handleIopubMessage: handleIopubMessage,
+      handleStdinRequest: handleStdinRequest,
+      handleChannelReply: handleChannelReply,
+      registerChannel: registerChannel
     };
-
-    ipyMessageHandler.httpUrl = function (kernelGuid, endpoint) {
-      return ipyUtils.url_path_join("http://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid, endpoint);
-    };
-
 
     var shellHandlers = {};
-    var ShellHandler = function(kernelGuid, message, iopubHandler, stdinHandler) {
-      this.msgId = ipyMessage.getMessageID(message);
+    var kernelGuids = {};
+
+    return $ipyMessageHandler;
+
+    function channelUrl (kernelGuid) {
+      return $ipyUtils.url_path_join("ws://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid,
+        'channels?session_id=' + ipySessionId);
+    }
+
+    function httpUrl (kernelGuid, endpoint) {
+      return $ipyUtils.url_path_join("http://" + $location.host() + ":" + $location.port(), ipyKernelPath, kernelGuid, endpoint);
+    }
+
+    function ShellHandler (message, iopubHandler, stdinHandler) {
+      this.msgId = $ipyMessage.getMessageId(message);
       shellHandlers[this.msgId] = this;
       this.reply = $q.defer();
       this.idle = $q.defer();
       this.iopubHandler = iopubHandler || _.noop;
       this.stdinHandler = stdinHandler; // Dunno what to do if this is empty and stdin is required. Guess we'll hang.
-    };
+    }
 
-    ipyMessageHandler.sendShellRequest = function (kernelGuid, message, stdinHandler, stdoutHandler) {
-      var msgId = ipyMessage.getHeader(message);
-      var handler = new ShellHandler(kernelGuid, message, stdinHandler, stdoutHandler);
-      msgId = ipyMessage.getMessageID(message);
+    function sendShellRequest (kernelGuid, message, stdinHandler, stdoutHandler) {
+      var msgId = $ipyMessage.getHeader(message);
+      var handler = new ShellHandler(message, stdinHandler, stdoutHandler);
+      msgId = $ipyMessage.getMessageId(message);
 
       // We only want to resolve the shell request after the engine declares itself idle
       // and the execute_result has returned.
@@ -44,96 +63,124 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
             delete shellHandlers[msgId];
           });
         });
-      ipyWebsocketHandler.send(ipyMessageHandler.channelUrl(kernelGuid), ipyMessage.stringifyMessage(message));
+      $ipyWebsocketHandler.send($ipyMessageHandler.channelUrl(kernelGuid), $ipyMessage.stringifyMessage(message));
       return handler.reply.promise;
-    };
+    }
 
-    ipyMessageHandler.handleShellReply = function (message) {
-      var parentId = ipyMessage.getParentMessageID(message);
+    function handleShellReply (message) {
+      var parentId = $ipyMessage.getParentMessageId(message);
       shellHandlers[parentId].idle.promise
         .then(function(result){
           shellHandlers[parentId].reply.resolve(message);
         });
-    };
+    }
 
-    ipyMessageHandler.handleIopubMessage = function (message) {
-      var parentId = ipyMessage.getParentMessageID(message);
+    function handleIopubMessage (message) {
+      var parentId = $ipyMessage.getParentMessageId(message);
       $rootScope.$apply(function(){
         shellHandlers[parentId].iopubHandler(message);
       });
-      if(ipyMessage.getMessageType(message) == 'status' && ipyMessage.getContent(message).execution_state == 'idle' ) {
+      if($ipyMessage.getMessageType(message) == 'status' && $ipyMessage.getContent(message).execution_state == 'idle' ) {
         shellHandlers[parentId].idle.resolve();
       }
-    };
+    }
 
-    ipyMessageHandler.handleStdinRequest = function (message) {
-      var parentId = ipyMessage.getParentMessageID(message);
-      var guid = ipyMessage.getKernelGuid(message);
+    function handleStdinRequest (message) {
+      var parentId = $ipyMessage.getParentMessageId(message);
+      var guid = $ipyMessage.getKernelGuid(message);
       $q.when(shellHandlers[parentId].stdinHandler(message))
         .then(function(response){
-          ipyWebsocketHandler.send(ipyMessageHandler.channelUrl(guid), ipyMessage.stringifyMessage(response));
+          $ipyWebsocketHandler.send($ipyMessageHandler.channelUrl(guid), $ipyMessage.stringifyMessage(response));
         });
-    };
+    }
 
-    ipyMessageHandler.handleChannelReply = function(event, url) {
-      var message = ipyMessage.parseMessage(event.data, kernelGuids[url]);
-      if(message.channel == 'shell') ipyMessageHandler.handleShellReply(message);
-      else if (message.channel == 'iopub') ipyMessageHandler.handleIopubMessage(message);
-      else if (message.channel == 'stdin') ipyMessageHandler.handleStdinRequest(message);
+    function handleChannelReply (event, url) {
+      var message = $ipyMessage.parseMessage(event.data, kernelGuids[url]);
+      if(message.channel == 'shell') $ipyMessageHandler.handleShellReply(message);
+      else if (message.channel == 'iopub') $ipyMessageHandler.handleIopubMessage(message);
+      else if (message.channel == 'stdin') $ipyMessageHandler.handleStdinRequest(message);
       else throw "Unknown channel";
-    };
+    }
 
-    var kernelGuids = {};
-    ipyMessageHandler.registerChannel = function (kernelGuid) {
-      var url = ipyMessageHandler.channelUrl(kernelGuid);
+    function registerChannel (kernelGuid) {
+      var url = $ipyMessageHandler.channelUrl(kernelGuid);
       kernelGuids[url] = kernelGuid;
-      return ipyWebsocketHandler.registerOnMessageCallback(url, ipyMessageHandler.handleChannelReply);
+      return $ipyWebsocketHandler.registerOnMessageCallback(url, $ipyMessageHandler.handleChannelReply);
+    }
+  }
+
+  function ipyMessageFactory (_, ipySessionId, ipyUsername) {
+    var $ipyMessage = {
+      getMessageId: getMessageId,
+      getParentMessageId: getParentMessageId,
+      getMessageType: getMessageType,
+      getSession: getSession,
+      getContent: getContent,
+      getHeader: getHeader,
+      getParentHeader: getParentHeader,
+      parseMessage: parseMessage,
+      getKernelGuid: getKernelGuid,
+      makeMessage: makeMessage,
+      makeExecuteMessage: makeExecuteMessage,
+      makeExecuteReply: makeExecuteReply,
+      makeExecuteResult: makeExecuteResult,
+      makeIopubStream: makeIopubStream,
+      makeIopubDisplay: makeIopubDisplay,
+      makeInspectMessage: makeInspectMessage,
+      makeInspectReply: makeInspectReply,
+      makeCompleteMessage: makeCompleteMessage,
+      makeHistoryMessage: makeHistoryMessage,
+      makeHistoryReply: makeHistoryReply,
+      makeKernelInfoMessage: makeKernelInfoMessage,
+      makeKernelShutdownMessage: makeKernelShutdownMessage,
+      makeStreamMessage: makeStreamMessage,
+      makeStatusReply: makeStatusReply,
+      makeInputRequest: makeInputRequest,
+      makeInputReply: makeInputReply,
+      stringifyMessage: stringifyMessage
     };
 
-    return ipyMessageHandler;
-  })
-  .factory('ipyMessage', function (_, ipySessionId, ipyUsername) {
-    var ipyMessage = {};
+    return $ipyMessage;
 
-    ipyMessage.getMessageID = function (message) {
+    function getMessageId (message) {
       return message.header.msg_id;
-    };
+    }
 
-    ipyMessage.getParentMessageID = function (message) {
+    function getParentMessageId (message) {
       return message.parent_header.msg_id;
-    };
+    }
 
-    ipyMessage.getMessageType = function (message) {
+    function getMessageType (message) {
       return message.header.msg_type;
-    };
+    }
 
-    ipyMessage.getSession = function(message) {
+    function getSession (message) {
       return message.header.session;
-    };
+    }
 
-    ipyMessage.getContent = function (message) {
+    function getContent (message) {
       return message.content;
-    };
+    }
 
-    ipyMessage.getHeader = function(message) {
+    function getHeader (message) {
       return message.header;
-    };
+    }
 
-    ipyMessage.getParentHeader = function(message) {
+    function getParentHeader (message) {
       return message.parent_header;
-    };
+    }
 
-    ipyMessage.parseMessage = function(data, kernelGuid) {
+    function parseMessage (data, kernelGuid) {
       var message = JSON.parse(data);
       message.kernel_guid = kernelGuid;
       return message;
-    };
+    }
 
-    ipyMessage.getKernelGuid = function(message) {
+    function getKernelGuid (message) {
       return message.kernel_guid;
-    };
+    }
 
-    ipyMessage.makeMessage = function (messageType, content, parentHeader, channel, metadata) {
+    function makeMessage (messageType, content, parentHeader, channel, metadata) {
       return {
         'header': {
           'msg_id': _.uniqueId(), // uuid
@@ -147,9 +194,9 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
         'metadata': _.isUndefined(metadata) ? {} : metadata, // dict
         'content': _.isUndefined(content) ? {} : content // dict
       };
-    };
+    }
 
-    ipyMessage.makeExecuteMessage = function (code, silent, storeHistory, userExpressions, allowStdin) {
+    function makeExecuteMessage (code, silent, storeHistory, userExpressions, allowStdin) {
       silent = _.isUndefined(silent) ? false : silent;
       storeHistory = _.isUndefined(storeHistory) ? true : storeHistory;
       userExpressions = _.isUndefined(userExpressions) ? {} : userExpressions;
@@ -161,10 +208,10 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
         'user_expressions': userExpressions,
         'allow_stdin': allowStdin
       };
-      return ipyMessage.makeMessage('execute_request', content);
-    };
+      return $ipyMessage.makeMessage('execute_request', content);
+    }
 
-    ipyMessage.makeExecuteReply = function(status, executionCount, userExpressions, payload, parentHeader, traceback){
+    function makeExecuteReply (status, executionCount, userExpressions, payload, parentHeader, traceback){
       var content = {
         status: status,
         execution_count: executionCount,
@@ -172,61 +219,61 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
         payload: payload
       };
       if(traceback) content.traceback = traceback;
-      return ipyMessage.makeMessage('execute_reply', content, parentHeader);
-    };
+      return $ipyMessage.makeMessage('execute_reply', content, parentHeader);
+    }
 
-    ipyMessage.makeExecuteResult = function(data, executionCount, metadata, parentHeader){
+    function makeExecuteResult (data, executionCount, metadata, parentHeader){
       var content = {
         data: data, // Format of {MIMEtype: data}
         execution_count: executionCount,
         metadata: metadata // Stores something like {'image/png': { 'width': 640, 'height': 480}}
       };
-      return ipyMessage.makeMessage('execute_result', content, parentHeader, 'iopub');
-    };
+      return $ipyMessage.makeMessage('execute_result', content, parentHeader, 'iopub');
+    }
 
-    ipyMessage.makeIopubStream = function(text, parentHeader) {
+    function makeIopubStream (text, parentHeader) {
       var content = {
         text: text,
         name: 'stdout'
       };
-      return ipyMessage.makeMessage('stream', content, parentHeader);
-    };
+      return $ipyMessage.makeMessage('stream', content, parentHeader);
+    }
 
-    ipyMessage.makeIopubDisplay = function(data, parentHeader) {
+    function makeIopubDisplay (data, parentHeader) {
       var content = {
         data: data
       };
-      return ipyMessage.makeMessage('display_data', content, parentHeader);
-    };
+      return $ipyMessage.makeMessage('display_data', content, parentHeader);
+    }
 
-    ipyMessage.makeInspectMessage = function (code, cursorPosition, detailLevel) {
+    function makeInspectMessage (code, cursorPosition, detailLevel) {
       detailLevel = _.isUndefined(detailLevel) ? 0 : detailLevel;
       var content = {
         'code': code,
         'cursor_pos': cursorPosition,
         'detail_level': detailLevel
       };
-      return ipyMessage.makeMessage('inspect_request', content);
-    };
+      return $ipyMessage.makeMessage('inspect_request', content);
+    }
 
-    ipyMessage.makeInspectReply = function (status, data, metadata, parentHeader) {
+    function makeInspectReply (status, data, metadata, parentHeader) {
       var content = {
         status: status,
         data: data,
         metadata: metadata
       };
-      return ipyMessage.makeMessage('inspect_reply', content, parentHeader);
-    };
+      return $ipyMessage.makeMessage('inspect_reply', content, parentHeader);
+    }
 
-    ipyMessage.makeCompleteMessage = function (code, cursorPosition) {
+    function makeCompleteMessage (code, cursorPosition) {
       var content = {
         'code': code,
         'cursor_pos': cursorPosition
       };
-      return ipyMessage.makeMessage('complete_request', content);
-    };
+      return $ipyMessage.makeMessage('complete_request', content);
+    }
 
-    ipyMessage.makeHistoryMessage = function (output, raw, historyAccessType, start, stop, lastN, pattern, unique) {
+    function makeHistoryMessage (output, raw, historyAccessType, start, stop, lastN, pattern, unique) {
       output = _.isUndefined(output) ? true : output;
       raw = _.isUndefined(raw) ? false : raw;
       start = _.isUndefined(start) ? '' : start;
@@ -245,52 +292,50 @@ angular.module('ipyng.messageHandler', ['ipyng.messageHandler.websocket', 'ipyng
         'pattern': pattern,
         'unique': unique
       };
-      return ipyMessage.makeMessage('history_request', content);
-    };
+      return $ipyMessage.makeMessage('history_request', content);
+    }
 
-    ipyMessage.makeHistoryReply = function (history, parentHeader) {
+    function makeHistoryReply (history, parentHeader) {
       var content = {
         history: history
       };
-      return ipyMessage.makeMessage('history_reply', content, parentHeader);
-    };
+      return $ipyMessage.makeMessage('history_reply', content, parentHeader);
+    }
 
-    ipyMessage.makeKernelInfoMessage = function () {
-      return ipyMessage.makeMessage('kernel_info_request');
-    };
+    function makeKernelInfoMessage () {
+      return $ipyMessage.makeMessage('kernel_info_request');
+    }
 
-    ipyMessage.makeKernelShutdownMessage = function (restart) {
+    function makeKernelShutdownMessage (restart) {
       var content = {'restart': restart};
-      return ipyMessage.makeMessage('shutdown_request', content);
-    };
+      return $ipyMessage.makeMessage('shutdown_request', content);
+    }
 
-    ipyMessage.makeStreamMessage = function (name, data) {
+    function makeStreamMessage (name, data) {
       var content = {
         'name': name,
         'data': data
       };
-      return ipyMessage.makeMessage('stream', content);
-    };
-    ipyMessage.makeStatusReply = function(status, parentHeader) {
+      return $ipyMessage.makeMessage('stream', content);
+    }
+
+    function makeStatusReply (status, parentHeader) {
       var content = {execution_state: status};
-      return ipyMessage.makeMessage('status', content, parentHeader, 'iopub');
-    };
+      return $ipyMessage.makeMessage('status', content, parentHeader, 'iopub');
+    }
 
-    ipyMessage.makeInputRequest = function(prompt, password, parentHeader) {
+    function makeInputRequest(prompt, password, parentHeader) {
       var content = {prompt: prompt, password: password};
-      return ipyMessage.makeMessage('input_request', content, parentHeader, 'stdin');
-    };
+      return $ipyMessage.makeMessage('input_request', content, parentHeader, 'stdin');
+    }
 
-    ipyMessage.makeInputReply = function (value, parentHeader) {
+    function makeInputReply (value, parentHeader) {
       var content = {'value': value};
-      return ipyMessage.makeMessage('input_reply', content, parentHeader, 'stdin');
-    };
+      return $ipyMessage.makeMessage('input_reply', content, parentHeader, 'stdin');
+    }
 
-    ipyMessage.stringifyMessage = function(message) {
+    function stringifyMessage (message) {
       return JSON.stringify(message);
-    };
-
-    return ipyMessage;
-  })
-  .value('ipyKernelPath', 'api/kernels/')
-;
+    }
+  }
+})(angular);
