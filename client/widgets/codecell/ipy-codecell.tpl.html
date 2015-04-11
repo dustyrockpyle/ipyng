@@ -1,20 +1,20 @@
-<md-whiteframe class="ipy-codecell md-whiteframe-z1" layout="column">
+<div class="ipy-codecell md-whiteframe-z1" layout="column">
     <div class="input" layout="row">
-        <div class="prompt">In [{{ cell.execution_count||' ' }}]:</div>
+        <div class="prompt">In [{{ executing ? '*' : cell.execution_count||' ' }}]:</div>
         <ipy-codearea source="cell.source" on-load="codeAreaLoad(cm)" flex></ipy-codearea>
     </div>
-    <div class="output-container" ng-class="{'toggled': showOutput}" layout="column">
-        <md-button ng-click="toggleOutput()" ng-show="cell.outputs.length"
+    <div class="output-container" ng-class="{'toggled': ctrl.showOutput}" layout="column">
+        <md-button ng-click="ctrl.toggleOutput()" ng-show="cell.outputs.length"
             class="md-button-toggle md-button md-default-theme" aria-label="Toggle Output">
             <div flex layout="row">
-                <span class="toggle-icon glyphicon glyphicon-chevron-down" ng-class="{'toggled': showOutput}" flex></span>
+                <span class="toggle-icon glyphicon glyphicon-chevron-down" ng-class="{'toggled': ctrl.showOutput}" flex></span>
             </div>
         </md-button>
         <md-divider class="divider"></md-divider>
-        <md-content class="output-content" ng-show="cell.outputs.length && showOutput">
+        <md-content class="output-content" ng-show="cell.outputs.length && ctrl.showOutput">
             <div class="output" layout="row" layout-align="start end">
                 <div class="display-area" layout="column">
-                    <div class="display-line" ng-repeat="output in outputs track by $index" layout="row">
+                    <div class="display-line" ng-repeat="output in cell.outputs track by $index" layout="row">
                         <div class="prompt">
                             <div ng-if="output.data">Out[{{ cell.execution_count || ' '}}]:</div>
                         </div>
@@ -24,4 +24,4 @@
             </div>
         </md-content>
     </div>
-</md-whiteframe>
+</div>

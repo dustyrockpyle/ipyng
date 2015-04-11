@@ -1,33 +1,35 @@
 // requires manual injection of kernel to function.
+(function(angular){
+  'use strict';
 
-angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
-  .controller('pdbCtrl', function($scope, $q, kernel, _) {
-    var stdoutDeferreds = [];
-    var stdoutHandler = function(stream){
-      if(stdoutDeferreds.length) stdoutDeferreds.pop().resolve(stream);
-    };
-    var stdoutPromise = function() {
-      stdoutDeferreds.push($q.defer());
-      return _.last(stdoutDeferreds).promise;
-    };
+  angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
+    .controller('pdbCtrl', pdbCtrl);
 
-    var promise;
-    var _this = this;
-    var d = {};
-    $scope.debugger = d;
-    d.currentFrame = null;
-    d.starting = null;
-    d.started = null;
-    d.stack = [];
-    d.args = [];
-    d.locals = [];
-    d.source = '';
+  function pdbCtrl ($scope, $q, kernel, _) {
+    var self = this,
+      stdoutDeferreds = [],
+      promise = $q.when(null);
 
-    this.start = function(code) {
+    self.currentFrame = null;
+    self.starting = null;
+    self.started = null;
+    self.stack = [];
+    self.args = [];
+    self.locals = [];
+    self.source = '';
+
+    self.start = start;
+    self.quit = quit;
+    self.evaluate = evaluate;
+    self.goToFrame = goToFrame;
+
+    $scope.$on('$destroy', quit);
+
+    function start (code) {
       var statement = 'import pdb\n';
       if(code) statement += 'pdb.run(' + code + ')';
       else statement += 'pdb.pm()';
-      d.starting = true;
+      self.starting = true;
       var deferred = $q.defer();
       promise = kernel.executeStdinSilent(statement, stdoutHandler)
         .catch(function(error){
@@ -35,27 +37,27 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
           return $q.reject(error);
         })
         .then(function(response){
-          d.started = true;
-          d.starting = false;
+          self.started = true;
+          self.starting = false;
           return response;
         })
         .then(function(response){
-          _this.goToFrame(0)
+          goToFrame(0)
             .then(function(){
               deferred.resolve(true);
             });
           return response;
         });
       return deferred.promise;
-    };
+    }
 
-    var updateStack = function() {
+    function updateStack () {
       promise = promise
         .then(function(response){
           return response.reply('where');
         })
         .then(function(response){
-          d.stack = _(response.stdout[0])
+          self.stack = _(response.stdout[0])
             .split('\n') // split to lines
             .reject(_.curry(_.startsWith)(_, '->', 0)) // get rid of the source lines
             .reverse() // we want the top of the stack to be zero
@@ -75,42 +77,41 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
             .value();
           return response;
         });
-    };
+    }
 
-    var updateLocals = function(){
+    function updateLocals () {
       promise = promise
         .then(function(response){
           return response.reply('p ' + 'list(locals().keys())');
         })
         .then(function(response) {
           var result = response.stdout[0].replace(/'/g, '"');
-          d.locals = JSON.parse(result); // Ugly.
+          self.locals = JSON.parse(result); // Ugly.
           return response;
         });
-    };
+    }
 
-    var updateArgs = function(){
+    function updateArgs () {
       promise = promise
         .then(function(response){
           return response.reply('a');
         })
         .then(function(response){
-          d.args = _(_.trim(response.stdout[0]))
+          self.args = _(_.trim(response.stdout[0]))
             .split('\n') // split to lines
             .invoke('split', ' = ') // split to name value pairs
             .map(_.curry(_.zipObject)(['name', 'value'])) // make name, value objects
             .value();
           return response;
         });
-    };
+    }
 
-    var updateSource = function(){
+    function updateSource () {
       var deferred = $q.defer();
       promise = promise
         .then(function(response){
           var reply = response.reply('l 1,10000'); // Seems arbitrarily high enough for now
-          var deferred = $q.defer();
-          return $q.all([reply, stdoutPromise()]);
+          return $q.all([reply, makeStdoutPromise()]);
         })
         .then(function(result){
           var response = result[0];
@@ -120,21 +121,21 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
             .invoke('substr', 6) // drop the margin characters
             .value();
           // get rid of the extra character on the current line
-          var currentLine = source[d.stack[d.currentFrame].lineNumber - 1];
-          source[d.stack[d.currentFrame].lineNumber - 1] = currentLine.substr(2);
-          d.source = source.join('\n'); // remake the text blob
+          var currentLine = source[self.stack[self.currentFrame].lineNumber - 1];
+          source[self.stack[self.currentFrame].lineNumber - 1] = currentLine.substr(2);
+          self.source = source.join('\n'); // remake the text blob
           deferred.resolve(true);
           return response;
         });
       return deferred.promise;
-    };
+    }
 
-    var evaluate = function(expression) {
+    function evaluateSingle (expression) {
       var deferred = $q.defer();
       promise = promise
         .then(function(response){
           var reply = response.reply('p ' + expression);
-          return $q.all([reply, stdoutPromise()]);
+          return $q.all([reply, makeStdoutPromise()]);
         })
         .then(function(result){
           var response = result[0];
@@ -143,30 +144,30 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
           return response;
         });
       return deferred.promise;
-    };
+    }
 
-    this.evaluate = function(expressions){
+    function evaluate (expressions) {
       var resultPromises = [];
       _.forEach(expressions, function(expression){
-        resultPromises.push(evaluate(expression));
+        resultPromises.push(evaluateSingle(expression));
       });
       return $q.all(resultPromises);
-    };
+    }
 
-    this.goToFrame = function (newFrame) {
+    function goToFrame (newFrame) {
       if(!promise) return $q.reject("Debugger not initialized");
-      if(newFrame == d.currentFrame) return $q.when(true);
+      if(newFrame == self.currentFrame) return $q.when(true);
       var deferred = $q.defer();
       promise = promise
         .then(function(response){
-          if (!d.started) return response;
-          if (d.currentFrame === newFrame) return response;
-          var diff = newFrame - d.currentFrame;
+          if (!self.started) return response;
+          if (self.currentFrame === newFrame) return response;
+          var diff = newFrame - self.currentFrame;
           if(diff > 0) return response.reply('u ' + diff);
           else return response.reply('d ' + (-diff));
         })
         .then(function(response){
-          d.currentFrame = newFrame;
+          self.currentFrame = newFrame;
           updateStack();
           updateLocals();
           updateArgs();
@@ -178,22 +179,28 @@ angular.module('ipy.pdb', ['ipyng', 'ng.lodash'])
           return response;
         });
       return deferred.promise;
-    };
+    }
 
-    this.quit = function(){
+    function stdoutHandler(stream){
+      if(stdoutDeferreds.length) stdoutDeferreds.pop().resolve(stream);
+    }
+
+    function makeStdoutPromise() {
+      stdoutDeferreds.push($q.defer());
+      return _.last(stdoutDeferreds).promise;
+    }
+
+    function quit () {
       promise = promise
         .then(function(response){
-          if(d.started) return response.reply('quit');
+          if(self.started) return response.reply('quit');
           return response;
         })
         .then(function(response){
-          d.currentFrame = null;
-          d.started = false;
+          self.currentFrame = null;
+          self.started = false;
           return response;
         });
-    };
-
-    $scope.$on('$destroy', function(){
-      _this.quit();
-    });
-  });
+    }
+  }
+})(angular);

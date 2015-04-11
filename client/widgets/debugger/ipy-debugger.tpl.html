@@ -1,23 +1,23 @@
 <div class="ipy-debugger">
-    <div ng-show="context.error">
+    <div ng-show="ctrl.error">
         <span>Error while starting debugger:</span>
-        <ipy-outputarea output="context.error"></ipy-outputarea>
+        <ipy-outputarea output="ctrl.error"></ipy-outputarea>
     </div>
     <div ng-if="debugger.started">
         <div class="top-row">
-            <ui-codemirror class="source" ui-codemirror-opts="cmOptions" ng-model="debugger.source"></ui-codemirror>
+            <ui-codemirror class="source" ui-codemirror-opts="ctrl.cmOptions" ng-model="debugger.source"></ui-codemirror>
         </div>
 
         <div class="bottom-row">
             <div class="stack">
-                <button class="btn frame" ng-click="goToFrame($index)"
+                <button class="btn frame" ng-click="ctrl.goToFrame($index)"
                         ng-class="{'btn-primary': $index==debugger.currentFrame, 'btn-danger': $index!=debugger.currentFrame}"
                         ng-repeat="frame in debugger.stack"
                         >{{ frame.filename }} {{ frame.function }}</button>
             </div>
 
             <div class="locals">
-                <ipy-watch immutable expressions="debugger.locals" refresh="context.refreshLocals"></ipy-watch>
+                <ipy-watch immutable expressions="debugger.locals" refresh="ctrl.refreshLocals"></ipy-watch>
             </div>
         </div>
     </div>

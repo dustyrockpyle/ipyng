@@ -1,7 +1,7 @@
-<md-content tabindex="0" class="ipy-notebook md-padding md-default-theme" ng-focus="isCommandMode=true" ng-blur="isCommandMode=false">
+<md-content tabindex="0" class="ipy-notebook md-padding md-default-theme" ng-focus="ctrl.isCommandMode=true" ng-blur="ctrl.isCommandMode=false">
     <md-list>
-        <md-item ng-click="commands.selectCell($index)" ng-repeat="cell in notebook.cells" ng-class="{'selected': $index == selected}" class="cell">
-            <ipy-codecell cell="cell" on-load="onCellLoad($index, cm, execute, toggleOutput)" ng-focus="commands.commandMode()" tabindex="0"></ipy-codecell>
+        <md-item ng-click="ctrl.selectCell($index)" ng-repeat="cell in ctrl.notebook.cells" ng-class="{'selected': $index == ctrl.selected}" class="cell">
+            <ipy-codecell cell="cell" on-load="onCellLoad($index, cm, execute, toggleOutput)" ng-focus="ctrl.commandMode()" tabindex="0"></ipy-codecell>
         </md-item>
     </md-list>
 </md-content>

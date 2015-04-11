@@ -5,14 +5,14 @@
             <th>Value</th>
         </tr></thead>
         <tbody>
-            <tr ng-repeat="expression in expressions track by $index">
-                <td ng-hide="ctrl.immutable"><input ng-model="expressions[$index]" ng-model-options="{ updateOn: 'blur'}"
+            <tr ng-repeat="expression in ctrl.expressions track by $index">
+                <td ng-hide="ctrl.immutable"><input ng-model="ctrl.expressions[$index]" ng-model-options="{updateOn: 'blur'}"
                      ng-click="selectText($event)"></td>
                 <td ng-show="ctrl.immutable"><span>{{ expression }}</span></td>
-                <td><div class="value">{{ watches[$index].getValue().text }}</div></td>
+                <td><div class="value">{{ ctrl.watches[$index].getValue().text }}</div></td>
             </tr>
             <tr ng-hide="ctrl.immutable">
-                <td><input ng-model="newExpression" ng-model-options="{ updateOn: 'blur'}"
+                <td><input ng-model="ctrl.newExpression" ng-model-options="{updateOn: 'blur'}"
                      ng-click="selectText($event)"></td>
                 <td></td>
             </tr>

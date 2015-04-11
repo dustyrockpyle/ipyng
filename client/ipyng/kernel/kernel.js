@@ -3,7 +3,8 @@
 
   angular.module('ipyng.kernel', ['ipyng.messageHandler', 'ipyng.utils'])
     .factory('$ipyKernel', ipyKernelFactory)
-    .directive('kernel', kernelDirective);
+    .directive('kernel', kernelDirective)
+    .controller('kernelCtrl', kernelCtrl);
 
   function ipyKernelFactory ($ipyMessageHandler, $ipyMessage, $q, $http, _) {
     var $ipyKernel = {
@@ -296,43 +297,34 @@
   function kernelDirective () {
     return {
       restrict: 'A',
-      controller: function ($scope, $attrs, $ipyKernel, _) {
-        if($attrs.kernel) this.id = $attrs.kernel;
-        else this.id = _.uniqueId();
-        var kernel;
-        if($attrs.$attr.start) {
-          kernel = $ipyKernel.startKernel(this.id, $attrs.start);
-        }
-        else {
-          kernel = $ipyKernel.getKernel(this.id);
-        }
-        var _this = this;
-        this.promise = kernel.then(function(kernel){
-          _.assign(_this, kernel);
-          return _this;
-        });
-
-        var makeKernelFunction = function(func, id) {
-          return function() {
-            var args = [id];
-            Array.prototype.push.apply(args, arguments);
-            return func.apply(this, args);
-          };
-        };
-
-        this.interruptKernel = makeKernelFunction($ipyKernel.interruptKernel, this.id);
-        this.restartKernel = makeKernelFunction($ipyKernel.restartKernel, this.id);
-        this.execute = makeKernelFunction($ipyKernel.execute, this.id);
-        this.executeSilent = makeKernelFunction($ipyKernel.executeSilent, this.id);
-        this.executeStdin = makeKernelFunction($ipyKernel.executeStdin, this.id);
-        this.executeStdinSilent = makeKernelFunction($ipyKernel.executeStdinSilent, this.id);
-        this.evaluate = makeKernelFunction($ipyKernel.evaluate, this.id);
-        this.inspect = makeKernelFunction($ipyKernel.inspect, this.id);
-        this.complete = makeKernelFunction($ipyKernel.complete, this.id);
-        this.historySearch = makeKernelFunction($ipyKernel.historySearch, this.id);
-        this.historyRange = makeKernelFunction($ipyKernel.historyRange, this.id);
-        this.historyTail = makeKernelFunction($ipyKernel.historyTail, this.id);
+      controller: 'kernelCtrl',
+      scope: {
+        kernel: '=',
+        start: '@?'
       }
     };
   }
+
+  function kernelCtrl ($attrs, $ipyKernel, _) {
+    var self = this;
+    if($attrs.kernel) self.id = $attrs.kernel;
+    else self.id = _.uniqueId();
+    var kernel;
+    if($attrs.$attr.start) {
+      kernel = $ipyKernel.startKernel(self.id, $attrs.start);
+    }
+    else {
+      kernel = $ipyKernel.getKernel(self.id);
+    }
+
+    self.promise = kernel.then(function(kernel){
+      _.assign(self, kernel);
+      return self;
+    });
+
+    _.forEach($ipyKernel, function(func, name){
+      if(_.isFunction(func)) self[name] = _.partial(func, self.id);
+    });
+  }
+
 })(angular);

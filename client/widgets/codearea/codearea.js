@@ -17,8 +17,8 @@
       link: function (scope, element, attrs, ctrls) {
         ctrls[0].init(ctrls[1]);
       },
-      bindToController: true,
       controller: 'ipyCodeareaCtrl',
+      bindToController: true,
       controllerAs: 'ctrl'
     };
   }
@@ -306,7 +306,6 @@
     }
 
     var selectTime = null;
-
     function select(index, $event) {
       // Don't handle the mouseenter selection if
       // it occurs immediately after a keyboard selection
