@@ -297,11 +297,7 @@
   function kernelDirective () {
     return {
       restrict: 'A',
-      controller: 'kernelCtrl',
-      scope: {
-        kernel: '=',
-        start: '@?'
-      }
+      controller: 'kernelCtrl'
     };
   }
 
