@@ -1,18 +1,13 @@
-<div class="test-main" kernel="test">
-    <button class="btn btn-primary" ui-sref="debug">Debug Post-Mortem</button>
-    <ipy-codecell cell="exception"></ipy-codecell>
-    <button class="btn btn-primary" ng-click="exception.execute()">Run</button>
-    <br>
-    <ipy-codecell cell="widget"></ipy-codecell>
-    <button class="btn btn-primary" ng-click="widget.execute()">Run</button>
-    <ipy-codecell cell="cellception"></ipy-codecell>
-    <button class="btn btn-primary" ng-click="cellception.execute()">Run</button>
-    <ipy-codecell cell="image"></ipy-codecell>
-    <button class="btn btn-primary" ng-click="image.execute()">Run</button>
-    <br>
-    <span>psutil: </span>
-    <ipy-psutil></ipy-psutil>
-    <br>
-    <span>watch: </span>
-    <ipy-watch></ipy-watch>
+<div class="test-file-explorer">
+    <md-button class="md-button md-default-theme" ng-click="ctrl.upLevel()" aria-label="Up One Level">Up One Level</md-button>
+    <div>
+        <span>{{ ctrl.curdir }}</span>
+    </div>
+    <md-list layout="column">
+        <md-item ng-repeat="d in ctrl.dir">
+            <a href="" ng-click="ctrl.navigate(d.name)" ng-if="!d.isfile">{{ d.name }}</a>
+            <span ng-if="d.isfile">{{ d.name }}</span>
+            <md-divider ng-if="!$last"></md-divider>
+        </md-item>
+    </md-list>
 </div>

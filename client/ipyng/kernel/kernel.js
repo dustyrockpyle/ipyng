@@ -40,12 +40,16 @@
     return $ipyKernel;
 
     function Kernel (kernelInfo, id, kernelGuid, unregister){
-      _.assign(this, kernelInfo);
-      this.id = id;
-      this.guid = kernelGuid;
-      this.unregister = unregister;
-      kernels[id] = this;
-      kernelGuids[this.guid] = this;
+      var self = this;
+      _.assign(self, kernelInfo);
+      self.id = id;
+      self.guid = kernelGuid;
+      self.unregister = unregister;
+      kernels[id] = self;
+      kernelGuids[self.guid] = self;
+      _.forEach($ipyKernel, function(func, name){
+        if(_.isFunction(func)) self[name] = _.partial(func, id);
+      });
     }
 
     function retrieveStartedKernels () {
@@ -316,10 +320,6 @@
     self.promise = kernel.then(function(kernel){
       _.assign(self, kernel);
       return self;
-    });
-
-    _.forEach($ipyKernel, function(func, name){
-      if(_.isFunction(func)) self[name] = _.partial(func, self.id);
     });
   }
 
