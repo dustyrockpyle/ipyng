@@ -13,12 +13,12 @@
         <md-divider class="divider"></md-divider>
         <md-content class="output-content" ng-show="cell.outputs.length && ctrl.showOutput">
             <div class="output" layout="row" layout-align="start end">
-                <div class="display-area" layout="column">
+                <div class="display-area" layout="column" flex>
                     <div class="display-line" ng-repeat="output in cell.outputs track by $index" layout="row">
                         <div class="prompt">
                             <div ng-if="output.data">Out[{{ cell.execution_count || ' '}}]:</div>
                         </div>
-                        <ipy-outputarea output="output"></ipy-outputarea>
+                        <ipy-outputarea output="output" flex></ipy-outputarea>
                     </div>
                 </div>
             </div>

@@ -1,0 +1,8 @@
+<div layout="row" layout-align="start center" flex  class="explorer">
+    <div ng-repeat="d in ctrl.dir_parts" layout="row" layout-align="start center">
+        <md-button ng-click="ctrl.breadcrumb($index)">
+            <span>{{ d }}</span>
+        </md-button>
+        <ng-md-icon ng-if="!$last" icon="chevron_right"></ng-md-icon>
+    </div>
+</div>

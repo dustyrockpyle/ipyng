@@ -1,6 +1,6 @@
 debug: &debug Yes
 static_url: &static_url "http://localhost:9000/"
-ipython_port: 8000
+ipython_port: 8001
 
 paths:
     root: &root !root
@@ -30,6 +30,7 @@ vendor_scripts: &vendor_scripts !prepend
     - angular-material/angular-material.js
     - angular-animate/angular-animate.js
     - angular-aria/angular-aria.js
+    - angular-material-icons/angular-material-icons.js
 
 templates_dest: &templates_dest !join [*build, test-app/templates.js]
 

@@ -1,13 +1,4 @@
-<div class="test-file-explorer">
-    <md-button class="md-button md-default-theme" ng-click="ctrl.upLevel()" aria-label="Up One Level">Up One Level</md-button>
-    <div>
-        <span>{{ ctrl.curdir }}</span>
-    </div>
-    <md-list layout="column">
-        <md-item ng-repeat="d in ctrl.dir">
-            <a href="" ng-click="ctrl.navigate(d.name)" ng-if="!d.isfile">{{ d.name }}</a>
-            <span ng-if="d.isfile">{{ d.name }}</span>
-            <md-divider ng-if="!$last"></md-divider>
-        </md-item>
-    </md-list>
+<div layout="column" flex role="main" class="test-main">
+    <md-toolbar class="md-default-theme test-toolbar" layout="row" ui-view="toolbar"></md-toolbar>
+    <md-content md-scroll-y class="md-default-theme test-body" ui-view="body"></md-content>
 </div>

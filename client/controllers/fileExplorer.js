@@ -33,7 +33,10 @@
     }
 
     function read (filename) {
-      return kernel.evaluate('json.dumps(open(r"' + filename + '").read())');
+      return kernel.evaluate('open(r"' + filename + '").read()')
+        .then(function(result){
+          return result.text.slice(1, -1);
+        });
     }
   }
 })(angular);

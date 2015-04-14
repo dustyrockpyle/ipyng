@@ -7,7 +7,7 @@ angular.module('test-app', [
   'ipy.watch',
   'ipy.debugger',
   'ipy.codecell',
-  'test.routes'
+  'test-app.routes'
 ])
   .config(function($provide){
     $provide.decorator('$ipyMessageHandler', function($delegate, $log, $ipyMessage){

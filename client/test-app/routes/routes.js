@@ -1,44 +1,9 @@
-angular.module('test.routes', ['ui.router', 'ipyng', 'ipy.fileExplorer'])
+angular.module('test-app.routes', ['ui.router', 'ngMaterial', 'ngMdIcons', 'test-app.routes.main', 'test-app.routes.notebook'])
   .config(function($stateProvider, $urlRouterProvider){
-    $urlRouterProvider.otherwise('/');
+    $urlRouterProvider.otherwise('/explorer');
     $stateProvider
-      .state('debug', {
-        url: '/debug',
-        templateUrl: 'test-debug.tpl.html',
-        resolve: {
-          kernel: function($ipyKernel) {
-            return $ipyKernel.getOrStartKernel('test', 'python');
-          }
-        },
-        controller: function(kernel){
-
-        }
-      })
-      .state('notebook', {
-        url: '/notebook',
-        templateUrl: 'test-notebook.tpl.html',
-        resolve: {
-          kernel: function($ipyKernel) {
-            return $ipyKernel.getOrStartKernel('test', 'python');
-          }
-        },
-        controller: function(kernel){
-
-        }
-      })
       .state('main', {
-        url: '/',
-        templateUrl: 'test-main.tpl.html',
-        resolve: {
-          kernel: function($ipyKernel) {
-            return $ipyKernel.getOrStartKernel('file', 'python');
-          }
-        },
-        controller: 'ipyFileExplorerCtrl',
-        controllerAs: 'ctrl'
-      })
-      .state('dir', {
-        parent: 'main',
-        url: ':path'
-      })
+        url: '',
+        templateUrl: 'test-main.tpl.html'
+      });
   });
