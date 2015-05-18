@@ -1,5 +1,5 @@
 <md-list layout="column" class="explorer md-whiteframe-z1">
-    <md-item ng-repeat="d in fCtrl.dir">
+    <md-item ng-repeat="d in ctrl.dir">
         <md-button class="md-button md-default-theme" layout-fill layout="row" layout-align="start center" ng-click="ctrl.navigate(d)">
             <ng-md-icon icon="{{ ctrl.icon(d) }}" class="list-icon"></ng-md-icon>
             <span layout-align="start center">{{ d.name }}</span>

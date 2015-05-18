@@ -1,5 +1,5 @@
 <div layout="row" layout-align="start center" flex  class="explorer">
-    <div ng-repeat="d in ctrl.dir_parts" layout="row" layout-align="start center">
+    <div ng-repeat="d in ctrl.dir_parts track by $index" layout="row" layout-align="start center">
         <md-button ng-click="ctrl.breadcrumb($index)">
             <span>{{ d }}</span>
         </md-button>
