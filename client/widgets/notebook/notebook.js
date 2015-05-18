@@ -54,7 +54,7 @@
 
       ///// initialize notebook state
       // default notebook if not provided
-
+      console.log(self.notebook);
       if(!self.notebook) {
         self.notebook = {
           cells: [],
@@ -65,7 +65,7 @@
           nbformat_minor: 0
         };
       }
-      cells = self.notebook.cells;
+      cells = self.notebook.worksheets[0].cells;
 
       // Initialize directive position
       selectCell(0);

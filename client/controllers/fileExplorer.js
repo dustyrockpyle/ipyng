@@ -4,8 +4,8 @@
 
   function ipyFileExplorerCtrl (kernel, $q) {
     var self = this,
-      dir_code = 'json.dumps([{"name": name, "isfile": os.path.isfile(name)} for name in os.listdir()])',
-      curdir_code = 'json.dumps(os.path.abspath("."))';
+      dir_code = 'JSON([{"name": name, "isfile": os.path.isfile(name)} for name in os.listdir()])',
+      curdir_code = 'JSON([os.path.abspath(".")])';
 
     self.curdir = $q.when();
     self.dir = $q.when();
@@ -16,15 +16,20 @@
     self.curdir = curDeferred.promise;
     var dirDeferred = $q.defer();
     self.dir = dirDeferred.promise;
-    kernel.executeSilent('import os; import json');
     self.lastNavigated = null;
+    kernel.executeSilent("import os; import json\n" +
+    "class JSON:\n" +
+    " def __init__(self, rep):\n" +
+    "  self.rep = rep\n" +
+    " def _repr_json_(self):\n" +
+    "  return json.dumps(self.rep)\n");
 
     updateDirectory();
     function updateDirectory () {
       return kernel.evaluate([dir_code, curdir_code])
         .then(function (result) {
-          dirDeferred.resolve(JSON.parse(result[0].text.slice(1, -1)));
-          curDeferred.resolve(JSON.parse(result[1].text.slice(1, -1)));
+          dirDeferred.resolve(result[0].data['application/json']);
+          curDeferred.resolve(result[1].data['application/json'][0]);
         });
     }
 
@@ -45,9 +50,9 @@
     }
 
     function read (filename) {
-      return kernel.evaluate('open(r"' + filename + '").read()')
+      return kernel.evaluate('JSON([open(r"' + filename + '").read()])')
         .then(function(result){
-          return result.text.slice(1, -1);
+          return result.data['application/json'][0];
         });
     }
   }

@@ -55,7 +55,7 @@
     }
   }
 
-  function bodyCtrl (fileExplorer, _, dir, curdir, $state) {
+  function bodyCtrl (_, dir, curdir, $state) {
     var self = this;
     self.icon = icon;
     self.navigate = navigate;
@@ -64,10 +64,9 @@
     function navigate(obj) {
       if (!obj.isfile) $state.go('explorer', {path: curdir + '/' + obj.name});
       else {
-        fileExplorer.read(obj.name)
-          .then(function (result) {
-            console.log(result);
-          });
+        if (_.endsWith(obj.name, '.ipynb')) {
+          $state.go('notebook', {notebook: obj.name});
+        }
       }
     }
 

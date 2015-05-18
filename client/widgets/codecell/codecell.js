@@ -23,7 +23,7 @@
     };
   }
 
-  function ipyCodecellCtrl ($scope) {
+  function ipyCodecellCtrl ($scope, _) {
     var self = this,
       cell,
       kernel;
@@ -34,8 +34,8 @@
     cell.execution_count = cell.execution_count || null;
     cell.metadata = cell.metadata || {collapsed: false, trusted: false};
     cell.outputs = cell.outputs || [];
-    cell.source = cell.source || '';
-
+    cell.input = cell.input || [];
+    cell.source = cell.input.join('');
     self.showOutput = true;
     self.toggleOutput = toggleOutput;
     self.execute = execute;
