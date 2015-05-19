@@ -6,7 +6,7 @@
   function explorerState ($stateProvider) {
     $stateProvider
       .state('explorer', {
-        url: '/explorer/:path',
+        url: '/explorer/:path/:file',
         parent: 'main',
         views: {
           toolbar: {
@@ -45,29 +45,30 @@
       });
   }
 
-  function toolbarCtrl (_, curdir, $state) {
+  function toolbarCtrl (_, curdir, $route, $stateParams) {
     var self = this;
     self.dir_parts = _.compact(curdir.split(/\//g));
+    if($stateParams.file) self.dir_parts.push($stateParams.file);
     self.breadcrumb = breadcrumb;
 
     function breadcrumb($index) {
-      $state.go('explorer', {path: _.slice(self.dir_parts, 0, $index + 1).join('/') + '/'});
+      if($index != self.dir_parts.length - 1)
+        $route.go(_.slice(self.dir_parts, 0, $index + 1).join('/') + '/');
     }
   }
 
-  function bodyCtrl (_, dir, curdir, $state) {
+  function bodyCtrl (_, dir, curdir, $route) {
     var self = this;
     self.icon = icon;
     self.navigate = navigate;
     self.dir = dir;
 
     function navigate(obj) {
-      if (!obj.isfile) $state.go('explorer', {path: curdir + '/' + obj.name});
-      else {
-        if (_.endsWith(obj.name, '.ipynb')) {
-          $state.go('notebook', {notebook: obj.name});
-        }
-      }
+      var path = curdir;
+      var file = null;
+      if (!obj.isfile) path += '/' + obj.name;
+      else file = obj.name;
+      $route.go(path, file);
     }
 
     function icon(obj) {
@@ -82,11 +83,11 @@
     return $testExplorer;
   }
 
-  function resolveCurDir (fileExplorer, $stateParams, $state) {
+  function resolveCurDir (fileExplorer, $stateParams, $route) {
     if(!$stateParams.path) {
       fileExplorer.curdir
         .then(function(curdir){
-          $state.go('explorer', {path: curdir});
+          $route.go($stateParams.path);
         });
       return;
     }

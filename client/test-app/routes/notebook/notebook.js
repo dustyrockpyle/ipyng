@@ -4,7 +4,7 @@ angular.module('test-app.routes.notebook', ['ui.router', 'ipyng', 'test-app.rout
 function notebookState ($stateProvider) {
   $stateProvider
     .state('notebook', {
-      url: '/notebook/:notebook',
+      url: '/notebook',
       parent: 'explorer',
       views: {
         body: {
@@ -30,7 +30,7 @@ function resolveFileExplorer ($testExplorer) {
 }
 
 function resolveNotebook (fileExplorer, $stateParams) {
-  var path = $stateParams.path + '/' + $stateParams.notebook;
+  var path = $stateParams.path + '/' + $stateParams.file;
   return fileExplorer.read(path)
     .then(function(result) {
       return JSON.parse(result);
