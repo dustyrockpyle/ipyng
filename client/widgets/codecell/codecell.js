@@ -36,7 +36,7 @@
     cell.outputs = cell.outputs || [];
     if(cell.input) cell.source = cell.input;
     cell.source = cell.source || [];
-    cell.source = cell.source.join('');
+    if(_.isArray(cell.source)) cell.source = cell.source.join('');
     self.showOutput = true;
     self.toggleOutput = toggleOutput;
     self.execute = execute;
