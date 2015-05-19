@@ -1,4 +1,10 @@
-<div layout="column" flex role="main" class="test-main">
-    <md-toolbar class="md-default-theme test-toolbar" layout="row" ui-view="toolbar"></md-toolbar>
-    <md-content md-scroll-y class="md-default-theme test-body" ui-view="body"></md-content>
+<div layout="row" flex ng-cloak>
+    <md-sidenav class="site-sidenav md-sidenav-left md-whiteframe-z2" md-component-id="left" md-is-locked-open="true">
+        <md-toolbar class="md-whiteframe-glow-z2"></md-toolbar>
+        <md-content flex role="navigation" ui-view="sidebar"></md-content>
+    </md-sidenav>
+    <div layout="column" flex role="main" class="test-main" tabindex="-1">
+        <md-toolbar class="md-default-theme test-toolbar" layout="row" ui-view="toolbar"></md-toolbar>
+        <md-content md-scroll-y class="md-default-theme test-body" ui-view="body"></md-content>
+    </div>
 </div>

@@ -54,7 +54,6 @@
 
       ///// initialize notebook state
       // default notebook if not provided
-      console.log(self.notebook);
       if(!self.notebook) {
         self.notebook = {
           cells: [],
@@ -65,7 +64,6 @@
           nbformat_minor: 0
         };
       }
-      console.log(self.notebook);
       if(self.notebook.worksheets) self.notebook.cells = self.notebook.worksheets[0].cells;
       cells = self.notebook.cells;
 
