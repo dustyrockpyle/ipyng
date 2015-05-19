@@ -31,6 +31,7 @@
       }
       if(output.output_type == 'stream'){
         $scope.type = 'text';
+        if(_.isArray(output.text)) output.text = output.text.join('');
         $scope.text = output.text;
         return;
       }

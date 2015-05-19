@@ -65,7 +65,9 @@
           nbformat_minor: 0
         };
       }
-      cells = self.notebook.worksheets[0].cells;
+      console.log(self.notebook);
+      if(self.notebook.worksheets) self.notebook.cells = self.notebook.worksheets[0].cells;
+      cells = self.notebook.cells;
 
       // Initialize directive position
       selectCell(0);

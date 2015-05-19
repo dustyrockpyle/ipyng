@@ -34,12 +34,14 @@
     cell.execution_count = cell.execution_count || null;
     cell.metadata = cell.metadata || {collapsed: false, trusted: false};
     cell.outputs = cell.outputs || [];
-    cell.input = cell.input || [];
-    cell.source = cell.input.join('');
+    if(cell.input) cell.source = cell.input;
+    cell.source = cell.source || [];
+    cell.source = cell.source.join('');
     self.showOutput = true;
     self.toggleOutput = toggleOutput;
     self.execute = execute;
     self.init = init;
+    console.log(cell.outputs);
 
     $scope.codeAreaLoad = codeAreaLoad;
     $scope.cell = cell;
