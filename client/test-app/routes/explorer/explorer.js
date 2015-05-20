@@ -27,6 +27,12 @@
             },
             controller: bodyCtrl,
             controllerAs: 'ctrl'
+          },
+          sidebar: {
+            templateUrl: 'test-explorer-sidebar.tpl.html',
+            resolve: {
+
+            }
           }
         }
       });
@@ -87,7 +93,7 @@
     if(!$stateParams.path) {
       fileExplorer.curdir
         .then(function(curdir){
-          $route.go($stateParams.path);
+          $route.go(curdir);
         });
       return;
     }
